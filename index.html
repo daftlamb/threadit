@@ -4,272 +4,1204 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Thread It</title>
+<script src="https://cdn.jsdelivr.net/npm/drawflow/dist/drawflow.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/drawflow/dist/drawflow.min.css">
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #0f0f0f; color: #ccc; font-family: Georgia, serif; overflow: hidden; }
-#toolbar { position: fixed; top: 0; left: 0; right: 0; height: 44px; background: #111; border-bottom: 1px solid #222; display: flex; align-items: center; padding: 0 16px; gap: 12px; z-index: 1000; }
-.tb-btn { background: none; border: 1px solid #333; color: #888; padding: 4px 12px; font-size: 12px; cursor: pointer; letter-spacing: 1px; }
-.tb-btn:hover { border-color: #888; color: #ddd; }
-#tb-title { color: #555; font-size: 13px; letter-spacing: 2px; margin-right: auto; }
-#drawflow-wrap { position: fixed; top: 44px; left: 0; right: 0; bottom: 60px; }
-#drawflow { width: 100%; height: 100%; }
-.drawflow { background: #0f0f0f; }
-.drawflow .drawflow-node { background: transparent; border: none; padding: 0; }
-.drawflow .drawflow-node.selected { background: transparent; }
-.drawflow .connection .main-path { stroke: #444; stroke-width: 2; }
-.thread-node { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 3px; min-width: 220px; }
-.thread-node.status-active { border-color: #5a4010; }
-.thread-node.status-done { border-color: #1a4a2a; }
-.thread-node.status-dropped { border-color: #3a1a1a; opacity: 0.6; }
-.node-header { padding: 8px 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-.node-title { font-size: 13px; color: #ddd; outline: none; flex: 1; background: transparent; border: none; font-family: inherit; }
-.node-status { font-size: 10px; padding: 2px 6px; border-radius: 2px; margin-left: 8px; flex-shrink: 0; cursor: pointer; }
-.node-status.idea { background: #2a2a3a; color: #8a8aaa; }
-.node-status.active { background: #3a2a0a; color: #c8a060; }
-.node-status.done { background: #0a2a1a; color: #60a880; }
-.node-status.dropped { background: #2a0a0a; color: #a86060; }
-.node-body { padding: 8px 10px; display: none; }
-.node-body.open { display: block; }
-.node-content { width: 100%; min-height: 80px; background: #111; border: 1px solid #222; color: #aaa; font-size: 12px; resize: vertical; padding: 6px; font-family: inherit; line-height: 1.5; }
-.node-content:focus { outline: none; border-color: #444; }
-.node-footer { padding: 4px 10px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #1a1a1a; }
-.node-time { font-size: 10px; color: #444; }
-#kw-overlay { position: fixed; top: 44px; left: 0; right: 0; bottom: 60px; pointer-events: none; z-index: 500; }
-#timeline { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #111; border-top: 1px solid #222; display: flex; align-items: center; padding: 0 20px; gap: 12px; z-index: 1000; }
-#tl-track { flex: 1; height: 2px; background: #222; position: relative; cursor: pointer; }
-#tl-scrubber { position: absolute; top: -8px; width: 2px; height: 18px; background: #888; cursor: ew-resize; transform: translateX(-50%); }
-#tl-dots { position: absolute; top: -4px; left: 0; right: 0; height: 10px; }
-#tl-label { font-size: 11px; color: #555; white-space: nowrap; min-width: 120px; }
+/* ── Reset & Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; font-family: Georgia, serif; }
+
+/* ── Theme Variables ── */
+:root {
+  --bg: #0f0f0f;
+  --surface: #1a1a1a;
+  --border: #2a2a2a;
+  --text: #ccc;
+  --text-muted: #666;
+  --accent: #c8a060;
+  --accent-dim: rgba(200,160,96,0.15);
+  --shadow: rgba(0,0,0,0.5);
+}
+[data-theme="parchment"] {
+  --bg: #f5f0e8; --surface: #ede8dc; --border: #d0c8b8;
+  --text: #3a3020; --text-muted: #9a8060; --accent: #8a6030;
+  --accent-dim: rgba(138,96,48,0.12); --shadow: rgba(0,0,0,0.15);
+}
+[data-theme="dusk"] {
+  --bg: #1a1020; --surface: #241830; --border: #3a2850;
+  --text: #d0c0e0; --text-muted: #7060a0; --accent: #a080d0;
+  --accent-dim: rgba(160,128,208,0.15); --shadow: rgba(0,0,0,0.5);
+}
+[data-theme="forest"] {
+  --bg: #0a1410; --surface: #121e18; --border: #1e3028;
+  --text: #b0d0b8; --text-muted: #507060; --accent: #60a870;
+  --accent-dim: rgba(96,168,112,0.15); --shadow: rgba(0,0,0,0.5);
+}
+[data-theme="minimal"] {
+  --bg: #ffffff; --surface: #f8f8f8; --border: #e0e0e0;
+  --text: #222; --text-muted: #999; --accent: #666;
+  --accent-dim: rgba(102,102,102,0.1); --shadow: rgba(0,0,0,0.1);
+}
+
+/* ── Layout ── */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ── Toolbar ── */
+#toolbar {
+  height: 44px;
+  min-height: 44px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 12px;
+  z-index: 100;
+  flex-shrink: 0;
+}
+#toolbar button {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: Georgia, serif;
+  font-size: 11px;
+  letter-spacing: 1px;
+  padding: 4px 8px;
+  border-radius: 3px;
+  transition: color 0.2s, background 0.2s;
+}
+#toolbar button:hover { color: var(--text); background: var(--accent-dim); }
+#btn-sidebar-toggle { font-size: 16px; padding: 4px 6px; }
+#toolbar-title {
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: var(--text-muted);
+  font-family: Georgia, serif;
+  flex: 1;
+  text-align: center;
+  pointer-events: none;
+}
+#theme-switcher { display: flex; gap: 6px; align-items: center; }
+.theme-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.theme-dot:hover, .theme-dot.active { border-color: var(--text); transform: scale(1.2); }
+.theme-dot[data-theme="ink"]       { background: #c8a060; }
+.theme-dot[data-theme="parchment"] { background: #8a6030; }
+.theme-dot[data-theme="dusk"]      { background: #a080d0; }
+.theme-dot[data-theme="forest"]    { background: #60a870; }
+.theme-dot[data-theme="minimal"]   { background: #666; }
+#toolbar-actions { display: flex; gap: 4px; }
+
+/* ── Main Body ── */
+#main-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Left Sidebar ── */
+#sidebar {
+  width: 220px;
+  min-width: 220px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.25s ease, min-width 0.25s ease, opacity 0.25s ease;
+  overflow: hidden;
+  z-index: 50;
+}
+#sidebar.collapsed { width: 0; min-width: 0; opacity: 0; pointer-events: none; }
+#sidebar-inner { width: 220px; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+#btn-new-project {
+  margin: 10px;
+  padding: 7px 10px;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: Georgia, serif;
+  font-size: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+#btn-new-project:hover { background: var(--accent); color: var(--bg); }
+#project-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 6px 10px;
+}
+#project-tree::-webkit-scrollbar { width: 4px; }
+#project-tree::-webkit-scrollbar-track { background: transparent; }
+#project-tree::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.project-group { margin-bottom: 4px; }
+.project-header {
+  display: flex;
+  align-items: center;
+  padding: 5px 6px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  transition: background 0.15s;
+  gap: 6px;
+}
+.project-header:hover { background: var(--accent-dim); color: var(--text); }
+.project-header .chevron { font-size: 9px; transition: transform 0.2s; }
+.project-header.open .chevron { transform: rotate(90deg); }
+.project-nodes { padding-left: 14px; }
+.tree-node-item {
+  display: flex;
+  align-items: center;
+  padding: 4px 6px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 12px;
+  color: var(--text-muted);
+  gap: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+.tree-node-item:hover { background: var(--accent-dim); color: var(--text); }
+.tree-node-item.selected { color: var(--accent); background: var(--accent-dim); }
+.tree-node-item .node-status-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+}
+/* ── Canvas ── */
+#canvas-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+}
+#drawflow {
+  width: 100%;
+  height: 100%;
+  background-image:
+    radial-gradient(circle, var(--border) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+/* Drawflow overrides */
+.drawflow { background: transparent !important; }
+.drawflow .drawflow-node {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+  padding: 0 !important;
+  min-width: 180px !important;
+  width: auto !important;
+  box-shadow: 0 2px 8px var(--shadow) !important;
+  cursor: pointer !important;
+}
+.drawflow .drawflow-node.selected {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px var(--accent-dim), 0 2px 12px var(--shadow) !important;
+}
+.drawflow .drawflow-node .drawflow_content_node { padding: 0; }
+/* Hide resize handle */
+.drawflow .drawflow-node .drawflow-node-resize { display: none !important; }
+/* Connection lines */
+.drawflow .connection .main-path {
+  stroke: var(--border) !important;
+  stroke-width: 1.5 !important;
+}
+/* Input/output ports */
+.drawflow .drawflow-node .input, .drawflow .drawflow-node .output {
+  background: var(--border) !important;
+  border: 1px solid var(--surface) !important;
+  width: 10px !important; height: 10px !important;
+}
+.drawflow .drawflow-node .input:hover, .drawflow .drawflow-node .output:hover {
+  background: var(--accent) !important;
+}
+
+/* ── Node Card ── */
+.node-card {
+  padding: 10px 12px;
+  min-width: 180px;
+  user-select: none;
+}
+.node-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.node-card-title {
+  font-size: 13px;
+  font-family: Georgia, serif;
+  color: var(--text);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.status-badge {
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: Georgia, serif;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
+  border: 1px solid transparent;
+}
+.status-badge:hover { opacity: 0.75; }
+.status-badge.idea    { color: var(--text-muted); border-color: var(--border); }
+.status-badge.active  { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
+.status-badge.done    { color: #60a870; border-color: #60a870; background: rgba(96,168,112,0.1); }
+.status-badge.dropped { color: #888; border-color: #444; background: rgba(100,100,100,0.1); text-decoration: line-through; }
+
+/* ── Right Panel ── */
+#right-panel {
+  width: 320px;
+  min-width: 320px;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 60;
+  overflow: hidden;
+}
+#right-panel.open { transform: translateX(0); }
+#panel-header {
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-shrink: 0;
+}
+#panel-title {
+  flex: 1;
+  font-size: 22px;
+  font-weight: normal;
+  font-family: Georgia, serif;
+  color: var(--text);
+  border: none;
+  background: transparent;
+  outline: none;
+  line-height: 1.3;
+  min-width: 0;
+}
+#panel-title:focus { border-bottom: 1px solid var(--accent); }
+#panel-header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+#btn-panel-close {
+  background: none; border: none; color: var(--text-muted);
+  cursor: pointer; font-size: 18px; padding: 2px 4px;
+  line-height: 1; transition: color 0.2s;
+}
+#btn-panel-close:hover { color: var(--text); }
+#panel-toolbar {
+  display: flex;
+  gap: 2px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+#panel-toolbar button {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: Georgia, serif;
+  font-size: 11px;
+  letter-spacing: 1px;
+  padding: 4px 7px;
+  border-radius: 3px;
+  transition: color 0.2s, background 0.2s;
+}
+#panel-toolbar button:hover { color: var(--text); background: var(--accent-dim); }
+#panel-editor {
+  flex: 1;
+  padding: 14px;
+  overflow-y: auto;
+  outline: none;
+  font-family: Georgia, serif;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
+  caret-color: var(--accent);
+}
+#panel-editor::-webkit-scrollbar { width: 4px; }
+#panel-editor::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+#panel-editor h1 { font-size: 18px; font-weight: normal; margin: 0 0 8px; color: var(--accent); }
+#panel-editor h2 { font-size: 15px; font-weight: normal; margin: 8px 0 4px; color: var(--text); }
+#panel-editor ul { padding-left: 18px; }
+#panel-editor li { margin: 2px 0; }
+#panel-editor img { max-width: 100%; border-radius: 4px; margin: 6px 0; }
+#panel-footer {
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+#panel-timestamp { font-size: 11px; color: var(--text-muted); letter-spacing: 0.5px; }
+#panel-tags {
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: Georgia, serif;
+  font-size: 12px;
+  padding: 3px 0;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+#panel-tags:focus { border-color: var(--accent); color: var(--text); }
+#panel-tags::placeholder { color: var(--text-muted); opacity: 0.6; }
+#img-input { display: none; }
+/* ── Timeline ── */
+#timeline {
+  height: 50px;
+  min-height: 50px;
+  background: var(--surface);
+  border-top: 1px solid transparent;
+  background-image: linear-gradient(to bottom, var(--accent-dim) 0px, transparent 1px);
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  overflow: hidden;
+}
+#timeline-track {
+  position: absolute;
+  left: 80px; right: 80px;
+  top: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+}
+#timeline-line {
+  position: absolute;
+  left: 0; right: 0;
+  height: 1px;
+  background: var(--border);
+}
+#timeline-scrubber {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 1px;
+  background: var(--accent);
+  left: 50%;
+  cursor: ew-resize;
+  z-index: 5;
+}
+#timeline-scrubber::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: 8px; height: 8px;
+  background: var(--accent);
+  border: 1px solid var(--surface);
+}
+.timeline-dot {
+  position: absolute;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  border: 1px solid var(--surface);
+  transform: translateX(-50%);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  z-index: 3;
+}
+.timeline-dot:hover { background: var(--accent); transform: translateX(-50%) scale(1.4); }
+.timeline-dot .dot-tooltip {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 10px;
+  font-family: Georgia, serif;
+  padding: 3px 7px;
+  border-radius: 3px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 10;
+}
+.timeline-dot:hover .dot-tooltip { opacity: 1; }
+#timeline-label-left {
+  position: absolute;
+  left: 14px;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: Georgia, serif;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+#timeline-label-right {
+  position: absolute;
+  right: 14px;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: Georgia, serif;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+/* ── SVG Keyword Overlay ── */
+#keyword-svg {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 10;
+  overflow: visible;
+}
+.keyword-line {
+  stroke: #c8a060;
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  opacity: 0.5;
+  fill: none;
+}
+
+/* ── Modals / Overlays ── */
+#modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+#modal-overlay.show { display: flex; }
+#modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 20px;
+  min-width: 280px;
+  max-width: 400px;
+}
+#modal-box h2 { font-size: 14px; font-weight: normal; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 14px; }
+#modal-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: Georgia, serif;
+  font-size: 13px;
+  padding: 7px 10px;
+  border-radius: 3px;
+  outline: none;
+  margin-bottom: 12px;
+}
+#modal-input:focus { border-color: var(--accent); }
+.modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+.modal-btns button {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: Georgia, serif;
+  font-size: 11px;
+  letter-spacing: 1px;
+  padding: 5px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.modal-btns button.primary { border-color: var(--accent); color: var(--accent); }
+.modal-btns button:hover { background: var(--accent-dim); color: var(--text); }
 </style>
 </head>
 <body>
-<div id="toolbar">
-  <span id="tb-title">THREAD IT</span>
-  <button class="tb-btn" id="btn-add">+ NODE</button>
-  <button class="tb-btn" id="btn-export">EXPORT</button>
-  <button class="tb-btn" id="btn-import">IMPORT</button>
-  <button class="tb-btn" id="btn-clear">CLEAR</button>
-</div>
-<div id="drawflow-wrap"><div id="drawflow"></div></div>
-<svg id="kw-overlay"></svg>
-<div id="timeline">
-  <span id="tl-label">all time</span>
-  <div id="tl-track">
-    <svg id="tl-dots" width="100%" height="10"></svg>
-    <div id="tl-scrubber"></div>
+<div id="app">
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <button id="btn-sidebar-toggle" title="Toggle sidebar">☰</button>
+    <span id="toolbar-title">THREAD IT</span>
+    <div id="theme-switcher">
+      <div class="theme-dot active" data-theme="ink" title="Ink"></div>
+      <div class="theme-dot" data-theme="parchment" title="Parchment"></div>
+      <div class="theme-dot" data-theme="dusk" title="Dusk"></div>
+      <div class="theme-dot" data-theme="forest" title="Forest"></div>
+      <div class="theme-dot" data-theme="minimal" title="Minimal"></div>
+    </div>
+    <div id="toolbar-actions">
+      <button id="btn-export" title="Export JSON">EXPORT</button>
+      <button id="btn-import" title="Import JSON">IMPORT</button>
+      <input type="file" id="import-input" accept=".json" style="display:none">
+    </div>
+  </div>
+
+  <!-- Main Body -->
+  <div id="main-body">
+    <!-- Left Sidebar -->
+    <div id="sidebar">
+      <div id="sidebar-inner">
+        <button id="btn-new-project">+ NEW PROJECT</button>
+        <div id="project-tree"></div>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div id="canvas-wrap">
+      <div id="drawflow"></div>
+      <svg id="keyword-svg"></svg>
+    </div>
+
+    <!-- Right Panel -->
+    <div id="right-panel">
+      <div id="panel-header">
+        <input id="panel-title" type="text" placeholder="Node title…" spellcheck="false">
+        <div id="panel-header-right">
+          <span id="panel-status-badge" class="status-badge idea">idea</span>
+          <button id="btn-panel-close">×</button>
+        </div>
+      </div>
+      <div id="panel-toolbar">
+        <button data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+        <button data-cmd="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+        <button data-cmd="h1" title="Heading 1">H1</button>
+        <button data-cmd="h2" title="Heading 2">H2</button>
+        <button data-cmd="ul" title="List">UL</button>
+        <button data-cmd="img" title="Insert image">IMG</button>
+        <input type="file" id="img-input" accept="image/*">
+      </div>
+      <div id="panel-editor" contenteditable="true" spellcheck="false"></div>
+      <div id="panel-footer">
+        <div id="panel-timestamp"></div>
+        <input id="panel-tags" type="text" placeholder="#tags space-separated">
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div id="timeline">
+    <span id="timeline-label-left"></span>
+    <div id="timeline-track">
+      <div id="timeline-line"></div>
+      <div id="timeline-scrubber"></div>
+    </div>
+    <span id="timeline-label-right"></span>
   </div>
 </div>
-<input type="file" id="import-file" accept=".json" style="display:none">
-<script src="https://cdn.jsdelivr.net/npm/drawflow/dist/drawflow.min.js"></script>
+
+<!-- Modal -->
+<div id="modal-overlay">
+  <div id="modal-box">
+    <h2 id="modal-title">NEW PROJECT</h2>
+    <input id="modal-input" type="text" placeholder="Project name…">
+    <div class="modal-btns">
+      <button id="modal-cancel">CANCEL</button>
+      <button id="modal-ok" class="primary">CREATE</button>
+    </div>
+  </div>
+</div>
 <script>
+// ── Data Model ──
+let nodeData = {};
+let projects = {}; // { name: { nodes: [id,...] } }
+let selectedNodeId = null;
+let currentTheme = 'ink';
+const STORAGE_KEY = 'threadit-v2';
+
+// ── Drawflow Init ──
 const dfEl = document.getElementById('drawflow');
 const editor = new Drawflow(dfEl);
-editor.reroute = true;
+editor.reroute = false;
+editor.reroute_fix_curvature = false;
+editor.force_first_input = false;
 editor.start();
-const nodeData = {};
-const STATUS_CYCLE = ['idea','active','done','dropped'];
-function formatTs(ts) {
-  const d = new Date(ts);
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')
-    +' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+
+// Disable default double-click add node
+editor.on('nodeCreated', () => {});
+
+// ── Load / Save ──
+function save() {
+  const df = editor.export();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodeData, projects, df, theme: currentTheme }));
 }
-function nodeHTML(title, status, ts) {
-  return '<div class="thread-node status-'+status+'">'
-    +'<div class="node-header">'
-    +'<input class="node-title" value="'+title.replace(/"/g,'&quot;')+'" onclick="event.stopPropagation()" oninput="onTitleInput(event)">'
-    +'<span class="node-status '+status+'" onclick="event.stopPropagation();cycleStatusEl(event)">'+status+'</span>'
-    +'</div><div class="node-body">'
-    +'<textarea class="node-content" placeholder="paste notes, links, #tags..." oninput="onContentInput(event)"></textarea>'
-    +'</div><div class="node-footer"><span class="node-time">'+formatTs(ts)+'</span></div></div>';
-}
-function getDfNodeId(el) {
-  const n = el.closest('.drawflow-node');
-  return n ? parseInt(n.id.replace('node-','')) : null;
-}
-function onTitleInput(e) {
-  const id = getDfNodeId(e.target);
-  if (id && nodeData[id]) { nodeData[id].title = e.target.value; saveData(); }
-}
-function onContentInput(e) {
-  const id = getDfNodeId(e.target);
-  if (id && nodeData[id]) { nodeData[id].content = e.target.value; saveData(); updateKwOverlay(); }
-}
-function cycleStatusEl(e) {
-  const id = getDfNodeId(e.target);
-  if (!id || !nodeData[id]) return;
-  const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf(nodeData[id].status)+1) % STATUS_CYCLE.length];
-  nodeData[id].status = next;
-  e.target.className = 'node-status '+next; e.target.textContent = next;
-  const wrap = e.target.closest('.thread-node');
-  if (wrap) wrap.className = 'thread-node status-'+next;
-  saveData();
-}
-dfEl.addEventListener('click', function(e) {
-  const hdr = e.target.closest('.node-header');
-  if (hdr && !e.target.classList.contains('node-title') && !e.target.classList.contains('node-status')) {
-    const body = hdr.closest('.thread-node').querySelector('.node-body');
-    if (body) body.classList.toggle('open');
-  }
-});
-function addNode(x, y, title, content, status, ts) {
-  title=title||'New Idea'; content=content||''; status=status||'idea'; ts=ts||Date.now();
-  const id = editor.addNode('thread',1,1,x,y,'thread-node-wrap',{},nodeHTML(title,status,ts));
-  nodeData[id] = {title:title,content:content,status:status,timestamp:ts};
-  setTimeout(function() {
-    const dfNode = dfEl.querySelector('.drawflow-node[id="node-'+id+'"]');
-    if (dfNode) { const ta = dfNode.querySelector('.node-content'); if (ta) ta.value=content; }
-    updateTimeline(); updateKwOverlay(); saveData();
-  }, 60);
-  return id;
-}
-function extractKeywords(text) {
-  const m = (text||'').match(/#\w+/g);
-  return m ? m.map(function(k){ return k.toLowerCase(); }) : [];
-}
-function getNodeCenter(id) {
-  const wrap = dfEl.querySelector('.drawflow-node[id="node-'+id+'"]');
-  if (!wrap) return null;
-  const r=wrap.getBoundingClientRect(), cr=dfEl.getBoundingClientRect();
-  return {x:r.left-cr.left+r.width/2, y:r.top-cr.top+r.height/2};
-}
-function updateKwOverlay() {
-  const svg = document.getElementById('kw-overlay');
-  svg.innerHTML = '';
-  const ids = Object.keys(nodeData), kwMap = {};
-  ids.forEach(function(id) {
-    extractKeywords(nodeData[id].content).forEach(function(kw) {
-      if (!kwMap[kw]) kwMap[kw]=[];
-      if (!kwMap[kw].includes(id)) kwMap[kw].push(id);
-    });
-  });
-  const drawn = new Set();
-  Object.keys(kwMap).forEach(function(kw) {
-    const grp = kwMap[kw];
-    for (var i=0;i<grp.length;i++) for (var j=i+1;j<grp.length;j++) {
-      const key=[grp[i],grp[j]].sort().join('-');
-      if (drawn.has(key)) continue; drawn.add(key);
-      const a=getNodeCenter(parseInt(grp[i])), b=getNodeCenter(parseInt(grp[j]));
-      if (!a||!b) continue;
-      const line=document.createElementNS('http://www.w3.org/2000/svg','line');
-      line.setAttribute('x1',a.x); line.setAttribute('y1',a.y);
-      line.setAttribute('x2',b.x); line.setAttribute('y2',b.y);
-      line.setAttribute('stroke','#c8a060'); line.setAttribute('stroke-width','1');
-      line.setAttribute('stroke-dasharray','4 4'); line.setAttribute('opacity','0.4');
-      svg.appendChild(line);
-    }
-  });
-}
-var tlScrubTime=null, tlDragging=false;
-function updateTimeline() {
-  const dotsSvg=document.getElementById('tl-dots'), label=document.getElementById('tl-label'), scrubber=document.getElementById('tl-scrubber');
-  dotsSvg.innerHTML='';
-  const ids=Object.keys(nodeData);
-  if (!ids.length) { label.textContent='no nodes'; return; }
-  const times=ids.map(function(id){ return nodeData[id].timestamp; });
-  const minT=Math.min.apply(null,times), maxT=Math.max.apply(null,times), range=maxT-minT||1;
-  const W=document.getElementById('tl-track').offsetWidth||300;
-  ids.forEach(function(id) {
-    const x=((nodeData[id].timestamp-minT)/range)*W;
-    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
-    c.setAttribute('cx',x); c.setAttribute('cy',5); c.setAttribute('r',3); c.setAttribute('fill','#555');
-    dotsSvg.appendChild(c);
-  });
-  if (tlScrubTime!==null) {
-    scrubber.style.left=((tlScrubTime-minT)/range*W)+'px'; label.textContent=formatTs(tlScrubTime);
-    ids.forEach(function(id) {
-      const n=dfEl.querySelector('.drawflow-node[id="node-'+id+'"]');
-      if (n) n.style.opacity=nodeData[id].timestamp>tlScrubTime?'0.2':'1';
-    });
-  } else {
-    scrubber.style.left=W+'px'; label.textContent='all time';
-    ids.forEach(function(id) {
-      const n=dfEl.querySelector('.drawflow-node[id="node-'+id+'"]');
-      if (n) n.style.opacity='1';
-    });
-  }
-}
-var tlTrack=document.getElementById('tl-track');
-tlTrack.addEventListener('mousedown',function(e){ tlDragging=true; moveScrubber(e); });
-document.addEventListener('mousemove',function(e){ if(tlDragging) moveScrubber(e); });
-document.addEventListener('mouseup',function(){ tlDragging=false; });
-tlTrack.addEventListener('dblclick',function(){ tlScrubTime=null; updateTimeline(); });
-function moveScrubber(e) {
-  const rect=tlTrack.getBoundingClientRect(), frac=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
-  const ids=Object.keys(nodeData); if (!ids.length) return;
-  const times=ids.map(function(id){ return nodeData[id].timestamp; });
-  const minT=Math.min.apply(null,times), maxT=Math.max.apply(null,times);
-  tlScrubTime=frac>=0.99?null:minT+frac*(maxT-minT); updateTimeline();
-}
-function saveData() {
-  try { localStorage.setItem('threadit-data',JSON.stringify({nodes:nodeData,df:editor.export()})); } catch(e){}
-}
-function loadData() {
+
+function load() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return;
   try {
-    const raw=localStorage.getItem('threadit-data'); if (!raw) return;
-    const saved=JSON.parse(raw);
-    if (saved.df) editor.import(saved.df);
-    if (saved.nodes) Object.assign(nodeData,saved.nodes);
-    setTimeout(function() {
-      Object.keys(nodeData).forEach(function(id) {
-        const dfNode=dfEl.querySelector('.drawflow-node[id="node-'+id+'"]');
-        if (dfNode) { const ta=dfNode.querySelector('.node-content'); if (ta) ta.value=nodeData[id].content||''; }
+    const s = JSON.parse(raw);
+    nodeData = s.nodeData || {};
+    projects = s.projects || {};
+    if (s.theme) applyTheme(s.theme, false);
+    if (s.df) {
+      editor.import(s.df);
+      // Re-attach click handlers to restored nodes
+      Object.keys(nodeData).forEach(id => {
+        attachNodeHandlers(id);
+        updateNodeCard(id);
       });
-      updateTimeline(); updateKwOverlay();
-    },200);
-  } catch(e){}
-}
-document.getElementById('btn-add').addEventListener('click',function(){ addNode(200+Math.random()*200,100+Math.random()*150); });
-document.getElementById('btn-export').addEventListener('click',function() {
-  const blob=new Blob([JSON.stringify({nodes:nodeData,df:editor.export()},null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download='threadit-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
-});
-document.getElementById('btn-import').addEventListener('click',function(){ document.getElementById('import-file').click(); });
-document.getElementById('import-file').addEventListener('change',function(e) {
-  const file=e.target.files[0]; if (!file) return;
-  const reader=new FileReader();
-  reader.onload=function(ev) {
-    try {
-      const saved=JSON.parse(ev.target.result);
-      editor.clear(); Object.keys(nodeData).forEach(function(k){ delete nodeData[k]; });
-      if (saved.df) editor.import(saved.df);
-      if (saved.nodes) Object.assign(nodeData,saved.nodes);
-      setTimeout(function() {
-        Object.keys(nodeData).forEach(function(id) {
-          const dfNode=dfEl.querySelector('.drawflow-node[id="node-'+id+'"]');
-          if (dfNode) { const ta=dfNode.querySelector('.node-content'); if (ta) ta.value=nodeData[id].content||''; }
-        });
-        updateTimeline(); updateKwOverlay();
-      },200);
-    } catch(err){ alert('Invalid JSON'); }
-  };
-  reader.readAsText(file); e.target.value='';
-});
-document.getElementById('btn-clear').addEventListener('click',function() {
-  if (!confirm('Clear all nodes?')) return;
-  editor.clear(); Object.keys(nodeData).forEach(function(k){ delete nodeData[k]; });
-  tlScrubTime=null; updateTimeline(); updateKwOverlay(); saveData();
-});
-dfEl.addEventListener('dblclick',function(e) {
-  if (!e.target.classList.contains('drawflow')&&e.target.id!=='drawflow') return;
-  const rect=dfEl.getBoundingClientRect(), zoom=editor.zoom||1;
-  addNode((e.clientX-rect.left-editor.canvas_x)/zoom,(e.clientY-rect.top-editor.canvas_y)/zoom);
-});
-document.addEventListener('keydown',function(e) {
-  if ((e.key==='Delete'||e.key==='Backspace')&&document.activeElement===document.body) {
-    const sel=editor.node_selected;
-    if (sel) {
-      const id=parseInt(sel.id.replace('node-',''));
-      editor.removeNodeId('node-'+id); delete nodeData[id];
-      updateTimeline(); updateKwOverlay(); saveData();
     }
+    renderTree();
+    renderTimeline();
+    renderKeywordLines();
+  } catch(e) { console.warn('Load failed', e); }
+}
+
+// ── Theme ──
+function applyTheme(name, doSave = true) {
+  currentTheme = name;
+  document.documentElement.setAttribute('data-theme', name === 'ink' ? '' : name);
+  document.querySelectorAll('.theme-dot').forEach(d => {
+    d.classList.toggle('active', d.dataset.theme === name);
+  });
+  if (doSave) save();
+  setTimeout(renderKeywordLines, 50);
+}
+
+document.querySelectorAll('.theme-dot').forEach(dot => {
+  dot.addEventListener('click', () => applyTheme(dot.dataset.theme));
+});
+
+// ── Project Management ──
+function createProject(name) {
+  if (!name || projects[name]) return;
+  projects[name] = { nodes: [] };
+  renderTree();
+  save();
+}
+
+function addNodeToProject(nodeId, projectName) {
+  if (!projects[projectName]) return;
+  if (!projects[projectName].nodes.includes(nodeId)) {
+    projects[projectName].nodes.push(nodeId);
+  }
+}
+
+// ── Add Node ──
+let nodeCounter = 0;
+function addNode(projectName, title, x, y) {
+  const id_hint = ++nodeCounter;
+  const data = {
+    title: title || 'Untitled',
+    content: '',
+    status: 'idea',
+    timestamp: Date.now(),
+    tags: [],
+    project: projectName
+  };
+  const html = buildNodeCardHTML(data);
+  const nodeId = editor.addNode(
+    'node_' + id_hint, 1, 1, x || 200, y || 200,
+    'df-node', { nodeId: id_hint }, html
+  );
+  // Drawflow returns the numeric id
+  const realId = nodeId;
+  data._dfId = realId;
+  nodeData[realId] = data;
+  addNodeToProject(realId, projectName);
+  attachNodeHandlers(realId);
+  renderTree();
+  renderTimeline();
+  save();
+  return realId;
+}
+
+function buildNodeCardHTML(data) {
+  const statusClass = data.status || 'idea';
+  const statusLabel = statusClass;
+  return `<div class="node-card">
+    <div class="node-card-header">
+      <span class="node-card-title">${escHtml(data.title)}</span>
+      <span class="status-badge ${statusClass}">${statusLabel}</span>
+    </div>
+  </div>`;
+}
+
+function updateNodeCard(id) {
+  const data = nodeData[id];
+  if (!data) return;
+  const el = document.querySelector(`.drawflow-node[id="node-${id}"] .drawflow_content_node`);
+  if (el) el.innerHTML = buildNodeCardHTML(data);
+  attachNodeHandlers(id);
+}
+
+function attachNodeHandlers(id) {
+  const nodeEl = document.querySelector(`.drawflow-node[id="node-${id}"]`);
+  if (!nodeEl) return;
+  // Click on card → open panel (but not on status badge)
+  const card = nodeEl.querySelector('.node-card');
+  if (card) {
+    card.addEventListener('click', (e) => {
+      if (e.target.classList.contains('status-badge')) return;
+      e.stopPropagation();
+      selectNode(id);
+    });
+  }
+  // Status badge click
+  const badge = nodeEl.querySelector('.status-badge');
+  if (badge) {
+    badge.addEventListener('click', (e) => {
+      e.stopPropagation();
+      cycleStatus(id);
+    });
+  }
+}
+
+// ── Status Cycle ──
+const STATUS_CYCLE = ['idea', 'active', 'done', 'dropped'];
+function cycleStatus(id) {
+  const data = nodeData[id];
+  if (!data) return;
+  const idx = STATUS_CYCLE.indexOf(data.status);
+  data.status = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+  updateNodeCard(id);
+  if (selectedNodeId === id) {
+    const badge = document.getElementById('panel-status-badge');
+    badge.className = 'status-badge ' + data.status;
+    badge.textContent = data.status;
+  }
+  renderTree();
+  save();
+}
+
+// ── Select Node ──
+function selectNode(id) {
+  selectedNodeId = id;
+  editor.selectNode(id);
+  openPanel(id);
+  // Highlight in tree
+  document.querySelectorAll('.tree-node-item').forEach(el => {
+    el.classList.toggle('selected', el.dataset.nodeId == id);
+  });
+}
+
+// ── Delete Node ──
+function deleteNode(id) {
+  editor.removeNodeId('node-' + id);
+  delete nodeData[id];
+  Object.values(projects).forEach(p => {
+    p.nodes = p.nodes.filter(n => n != id);
+  });
+  if (selectedNodeId == id) closePanel();
+  renderTree();
+  renderTimeline();
+  renderKeywordLines();
+  save();
+}
+
+// ── Right Panel ──
+const rightPanel = document.getElementById('right-panel');
+const panelTitle = document.getElementById('panel-title');
+const panelEditor = document.getElementById('panel-editor');
+const panelTags = document.getElementById('panel-tags');
+const panelTimestamp = document.getElementById('panel-timestamp');
+const panelStatusBadge = document.getElementById('panel-status-badge');
+
+function openPanel(id) {
+  const data = nodeData[id];
+  if (!data) return;
+  panelTitle.value = data.title;
+  panelEditor.innerHTML = data.content || '';
+  panelTags.value = data.tags ? data.tags.join(' ') : '';
+  panelStatusBadge.className = 'status-badge ' + data.status;
+  panelStatusBadge.textContent = data.status;
+  const d = new Date(data.timestamp);
+  panelTimestamp.textContent = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  rightPanel.classList.add('open');
+}
+
+function closePanel() {
+  rightPanel.classList.remove('open');
+  selectedNodeId = null;
+  document.querySelectorAll('.tree-node-item').forEach(el => el.classList.remove('selected'));
+}
+
+document.getElementById('btn-panel-close').addEventListener('click', closePanel);
+
+// Panel title edit
+panelTitle.addEventListener('input', () => {
+  if (!selectedNodeId) return;
+  nodeData[selectedNodeId].title = panelTitle.value;
+  updateNodeCard(selectedNodeId);
+  renderTree();
+  save();
+});
+
+// Panel editor edit
+panelEditor.addEventListener('input', () => {
+  if (!selectedNodeId) return;
+  nodeData[selectedNodeId].content = panelEditor.innerHTML;
+  extractAndSaveTags(selectedNodeId);
+  renderKeywordLines();
+  save();
+});
+
+// Tags edit
+panelTags.addEventListener('input', () => {
+  if (!selectedNodeId) return;
+  const raw = panelTags.value;
+  nodeData[selectedNodeId].tags = raw.match(/#\w+/g) || [];
+  renderKeywordLines();
+  save();
+});
+
+// Panel status badge click
+panelStatusBadge.addEventListener('click', () => {
+  if (!selectedNodeId) return;
+  cycleStatus(selectedNodeId);
+});
+
+// Extract tags from content
+function extractAndSaveTags(id) {
+  const data = nodeData[id];
+  if (!data) return;
+  const text = panelEditor.innerText || '';
+  const tagsFromContent = text.match(/#\w+/g) || [];
+  const tagsFromField = (panelTags.value.match(/#\w+/g) || []);
+  data.tags = [...new Set([...tagsFromContent, ...tagsFromField])];
+  panelTags.value = data.tags.join(' ');
+}
+
+// ── Panel Toolbar (formatting) ──
+document.querySelectorAll('#panel-toolbar button[data-cmd]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const cmd = btn.dataset.cmd;
+    panelEditor.focus();
+    if (cmd === 'bold') document.execCommand('bold');
+    else if (cmd === 'italic') document.execCommand('italic');
+    else if (cmd === 'h1') document.execCommand('formatBlock', false, 'h1');
+    else if (cmd === 'h2') document.execCommand('formatBlock', false, 'h2');
+    else if (cmd === 'ul') document.execCommand('insertUnorderedList');
+    else if (cmd === 'img') document.getElementById('img-input').click();
+  });
+});
+
+document.getElementById('img-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    panelEditor.focus();
+    document.execCommand('insertHTML', false, `<img src="${ev.target.result}" alt="image">`);
+    if (selectedNodeId) {
+      nodeData[selectedNodeId].content = panelEditor.innerHTML;
+      save();
+    }
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+
+// ── Project Tree Render ──
+function renderTree() {
+  const tree = document.getElementById('project-tree');
+  tree.innerHTML = '';
+  Object.entries(projects).forEach(([name, proj]) => {
+    const group = document.createElement('div');
+    group.className = 'project-group';
+    const header = document.createElement('div');
+    header.className = 'project-header open';
+    header.innerHTML = `<span class="chevron">▶</span><span>${escHtml(name)}</span>
+      <button class="add-node-btn" data-project="${escHtml(name)}" title="Add node" style="margin-left:auto;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:0 2px;">+</button>`;
+    header.querySelector('.add-node-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cx = 150 + Math.random() * 400;
+      const cy = 100 + Math.random() * 300;
+      addNode(name, 'New Node', cx, cy);
+    });
+    header.addEventListener('click', (e) => {
+      if (e.target.classList.contains('add-node-btn')) return;
+      header.classList.toggle('open');
+      nodesDiv.style.display = header.classList.contains('open') ? '' : 'none';
+    });
+    const nodesDiv = document.createElement('div');
+    nodesDiv.className = 'project-nodes';
+    (proj.nodes || []).forEach(nid => {
+      const nd = nodeData[nid];
+      if (!nd) return;
+      const item = document.createElement('div');
+      item.className = 'tree-node-item' + (selectedNodeId == nid ? ' selected' : '');
+      item.dataset.nodeId = nid;
+      const dotColor = { idea: 'var(--text-muted)', active: 'var(--accent)', done: '#60a870', dropped: '#555' };
+      item.innerHTML = `<span class="node-status-dot" style="background:${dotColor[nd.status] || 'var(--text-muted)'}"></span><span>${escHtml(nd.title)}</span>`;
+      item.addEventListener('click', () => {
+        selectNode(nid);
+        // Scroll canvas to node
+        const nodeEl = document.querySelector(`.drawflow-node[id="node-${nid}"]`);
+        if (nodeEl) editor.selectNode(nid);
+      });
+      nodesDiv.appendChild(item);
+    });
+    group.appendChild(header);
+    group.appendChild(nodesDiv);
+    tree.appendChild(group);
+  });
+}
+
+// ── Timeline Render ──
+function renderTimeline() {
+  const track = document.getElementById('timeline-track');
+  // Remove old dots
+  track.querySelectorAll('.timeline-dot').forEach(d => d.remove());
+  const nodes = Object.entries(nodeData);
+  if (nodes.length === 0) {
+    document.getElementById('timeline-label-left').textContent = '';
+    document.getElementById('timeline-label-right').textContent = '';
+    return;
+  }
+  const times = nodes.map(([,d]) => d.timestamp).filter(Boolean);
+  const minT = Math.min(...times);
+  const maxT = Math.max(...times);
+  const range = maxT - minT || 1;
+  const fmt = (t) => new Date(t).toLocaleDateString([], {month:'short', day:'numeric'});
+  document.getElementById('timeline-label-left').textContent = fmt(minT);
+  document.getElementById('timeline-label-right').textContent = fmt(maxT);
+  nodes.forEach(([id, data]) => {
+    if (!data.timestamp) return;
+    const pct = (data.timestamp - minT) / range;
+    const dot = document.createElement('div');
+    dot.className = 'timeline-dot';
+    dot.style.left = (pct * 100) + '%';
+    const tooltip = document.createElement('div');
+    tooltip.className = 'dot-tooltip';
+    tooltip.textContent = data.title;
+    dot.appendChild(tooltip);
+    dot.addEventListener('click', () => selectNode(parseInt(id)));
+    track.appendChild(dot);
+  });
+}
+
+// ── Keyword Connection Lines ──
+function renderKeywordLines() {
+  const svg = document.getElementById('keyword-svg');
+  svg.innerHTML = '';
+  const canvasWrap = document.getElementById('canvas-wrap');
+  const wrapRect = canvasWrap.getBoundingClientRect();
+
+  // Build tag → [nodeIds] map
+  const tagMap = {};
+  Object.entries(nodeData).forEach(([id, data]) => {
+    (data.tags || []).forEach(tag => {
+      if (!tagMap[tag]) tagMap[tag] = [];
+      tagMap[tag].push(id);
+    });
+  });
+
+  // Draw lines between nodes sharing tags
+  const drawn = new Set();
+  Object.values(tagMap).forEach(ids => {
+    if (ids.length < 2) return;
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        const key = [ids[i], ids[j]].sort().join('-');
+        if (drawn.has(key)) continue;
+        drawn.add(key);
+        const a = getNodeCenter(ids[i], wrapRect);
+        const b = getNodeCenter(ids[j], wrapRect);
+        if (!a || !b) continue;
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
+        line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
+        line.setAttribute('class', 'keyword-line');
+        svg.appendChild(line);
+      }
+    }
+  });
+}
+
+function getNodeCenter(id, wrapRect) {
+  const el = document.querySelector(`.drawflow-node[id="node-${id}"]`);
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  return {
+    x: r.left - wrapRect.left + r.width / 2,
+    y: r.top - wrapRect.top + r.height / 2
+  };
+}
+
+// Re-render lines after any drag
+editor.on('nodeMoved', () => { renderKeywordLines(); save(); });
+editor.on('zoom', renderKeywordLines);
+editor.on('translate', renderKeywordLines);
+
+// ── Keyboard Shortcuts ──
+document.addEventListener('keydown', (e) => {
+  // Escape: close panel
+  if (e.key === 'Escape') { closePanel(); return; }
+
+  // Ctrl+B / Ctrl+I in editor
+  if (document.activeElement === panelEditor) {
+    if (e.ctrlKey && e.key === 'b') { e.preventDefault(); document.execCommand('bold'); }
+    if (e.ctrlKey && e.key === 'i') { e.preventDefault(); document.execCommand('italic'); }
+    return;
+  }
+
+  // Delete: remove selected node (only when not in text input)
+  if ((e.key === 'Delete' || e.key === 'Backspace') &&
+      document.activeElement !== panelTitle &&
+      document.activeElement !== panelTags &&
+      document.activeElement !== panelEditor &&
+      document.activeElement.tagName !== 'INPUT') {
+    if (selectedNodeId) { deleteNode(selectedNodeId); }
   }
 });
-editor.on('translate',function(){ updateKwOverlay(); });
-editor.on('zoom',function(){ updateKwOverlay(); });
-loadData();
-setTimeout(function(){ if (Object.keys(nodeData).length===0) addNode(300,200,'Origin','','idea'); },300);
+
+// ── Sidebar Toggle ──
+document.getElementById('btn-sidebar-toggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('collapsed');
+  setTimeout(renderKeywordLines, 300);
+});
+
+// ── New Project Modal ──
+let modalCallback = null;
+function showModal(title, placeholder, cb) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-input').value = '';
+  document.getElementById('modal-input').placeholder = placeholder;
+  modalCallback = cb;
+  document.getElementById('modal-overlay').classList.add('show');
+  setTimeout(() => document.getElementById('modal-input').focus(), 50);
+}
+function hideModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+  modalCallback = null;
+}
+document.getElementById('modal-cancel').addEventListener('click', hideModal);
+document.getElementById('modal-ok').addEventListener('click', () => {
+  const val = document.getElementById('modal-input').value.trim();
+  if (val && modalCallback) modalCallback(val);
+  hideModal();
+});
+document.getElementById('modal-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('modal-ok').click();
+  if (e.key === 'Escape') hideModal();
+});
+document.getElementById('modal-overlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('modal-overlay')) hideModal();
+});
+
+document.getElementById('btn-new-project').addEventListener('click', () => {
+  showModal('NEW PROJECT', 'Project name…', (name) => {
+    createProject(name);
+    // Add a starter node
+    addNode(name, 'First Thread', 200, 180);
+  });
+});
+
+// ── Export / Import ──
+document.getElementById('btn-export').addEventListener('click', () => {
+  const data = { nodeData, projects, df: editor.export(), theme: currentTheme };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'threadit-export.json';
+  a.click();
+});
+
+document.getElementById('btn-import').addEventListener('click', () => {
+  document.getElementById('import-input').click();
+});
+document.getElementById('import-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const s = JSON.parse(ev.target.result);
+      nodeData = s.nodeData || {};
+      projects = s.projects || {};
+      if (s.theme) applyTheme(s.theme, false);
+      if (s.df) {
+        editor.import(s.df);
+        Object.keys(nodeData).forEach(id => { attachNodeHandlers(id); updateNodeCard(id); });
+      }
+      renderTree(); renderTimeline(); renderKeywordLines(); save();
+    } catch(err) { alert('Import failed: ' + err.message); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+// ── Timeline Scrubber (drag) ──
+(function() {
+  const scrubber = document.getElementById('timeline-scrubber');
+  const track = document.getElementById('timeline-track');
+  let dragging = false;
+  scrubber.addEventListener('mousedown', (e) => { dragging = true; e.preventDefault(); });
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const rect = track.getBoundingClientRect();
+    let pct = (e.clientX - rect.left) / rect.width;
+    pct = Math.max(0, Math.min(1, pct));
+    scrubber.style.left = (pct * 100) + '%';
+    // Update right label with interpolated date
+    const nodes = Object.values(nodeData);
+    if (nodes.length > 0) {
+      const times = nodes.map(d => d.timestamp).filter(Boolean);
+      const minT = Math.min(...times), maxT = Math.max(...times);
+      const t = minT + pct * (maxT - minT);
+      document.getElementById('timeline-label-right').textContent =
+        new Date(t).toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'});
+    }
+  });
+  document.addEventListener('mouseup', () => { dragging = false; });
+  // Double-click reset
+  document.getElementById('timeline').addEventListener('dblclick', () => {
+    scrubber.style.left = '50%';
+    renderTimeline();
+  });
+})();
+
+// ── Drawflow node click passthrough ──
+// Drawflow intercepts clicks; we handle via card click in attachNodeHandlers
+editor.on('nodeSelected', (id) => {
+  // Only open panel if not already open for this node
+  if (selectedNodeId !== id) selectNode(id);
+});
+editor.on('nodeUnselected', () => {
+  // Don't auto-close; let user close manually
+});
+
+// ── Utility ──
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Init ──
+load();
+
+// If no projects exist, create a default one
+if (Object.keys(projects).length === 0) {
+  createProject('My Project');
+  addNode('My Project', 'First Thread', 200, 180);
+  addNode('My Project', 'Second Thread', 450, 250);
+}
+
 </script>
 </body>
 </html>
