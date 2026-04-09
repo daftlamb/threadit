@@ -4,1204 +4,759 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Thread It</title>
-<script src="https://cdn.jsdelivr.net/npm/drawflow/dist/drawflow.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/outfit/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/outfit/300.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/drawflow/dist/drawflow.min.css">
 <style>
-/* ── Reset & Base ── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; overflow: hidden; font-family: Georgia, serif; }
-
-/* ── Theme Variables ── */
-:root {
-  --bg: #0f0f0f;
-  --surface: #1a1a1a;
-  --border: #2a2a2a;
-  --text: #ccc;
-  --text-muted: #666;
-  --accent: #c8a060;
-  --accent-dim: rgba(200,160,96,0.15);
-  --shadow: rgba(0,0,0,0.5);
-}
-[data-theme="parchment"] {
-  --bg: #f5f0e8; --surface: #ede8dc; --border: #d0c8b8;
-  --text: #3a3020; --text-muted: #9a8060; --accent: #8a6030;
-  --accent-dim: rgba(138,96,48,0.12); --shadow: rgba(0,0,0,0.15);
-}
-[data-theme="dusk"] {
-  --bg: #1a1020; --surface: #241830; --border: #3a2850;
-  --text: #d0c0e0; --text-muted: #7060a0; --accent: #a080d0;
-  --accent-dim: rgba(160,128,208,0.15); --shadow: rgba(0,0,0,0.5);
-}
-[data-theme="forest"] {
-  --bg: #0a1410; --surface: #121e18; --border: #1e3028;
-  --text: #b0d0b8; --text-muted: #507060; --accent: #60a870;
-  --accent-dim: rgba(96,168,112,0.15); --shadow: rgba(0,0,0,0.5);
-}
-[data-theme="minimal"] {
-  --bg: #ffffff; --surface: #f8f8f8; --border: #e0e0e0;
-  --text: #222; --text-muted: #999; --accent: #666;
-  --accent-dim: rgba(102,102,102,0.1); --shadow: rgba(0,0,0,0.1);
-}
-
-/* ── Layout ── */
-#app {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background: var(--bg);
-  color: var(--text);
-}
-
-/* ── Toolbar ── */
-#toolbar {
-  height: 44px;
-  min-height: 44px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  gap: 12px;
-  z-index: 100;
-  flex-shrink: 0;
-}
-#toolbar button {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-family: Georgia, serif;
-  font-size: 11px;
-  letter-spacing: 1px;
-  padding: 4px 8px;
-  border-radius: 3px;
-  transition: color 0.2s, background 0.2s;
-}
-#toolbar button:hover { color: var(--text); background: var(--accent-dim); }
-#btn-sidebar-toggle { font-size: 16px; padding: 4px 6px; }
-#toolbar-title {
-  font-size: 12px;
-  letter-spacing: 3px;
-  color: var(--text-muted);
-  font-family: Georgia, serif;
-  flex: 1;
-  text-align: center;
-  pointer-events: none;
-}
-#theme-switcher { display: flex; gap: 6px; align-items: center; }
-.theme-dot {
-  width: 12px; height: 12px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: border-color 0.2s, transform 0.2s;
-}
-.theme-dot:hover, .theme-dot.active { border-color: var(--text); transform: scale(1.2); }
-.theme-dot[data-theme="ink"]       { background: #c8a060; }
-.theme-dot[data-theme="parchment"] { background: #8a6030; }
-.theme-dot[data-theme="dusk"]      { background: #a080d0; }
-.theme-dot[data-theme="forest"]    { background: #60a870; }
-.theme-dot[data-theme="minimal"]   { background: #666; }
-#toolbar-actions { display: flex; gap: 4px; }
-
-/* ── Main Body ── */
-#main-body {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-  position: relative;
-}
-
-/* ── Left Sidebar ── */
-#sidebar {
-  width: 220px;
-  min-width: 220px;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  transition: width 0.25s ease, min-width 0.25s ease, opacity 0.25s ease;
-  overflow: hidden;
-  z-index: 50;
-}
-#sidebar.collapsed { width: 0; min-width: 0; opacity: 0; pointer-events: none; }
-#sidebar-inner { width: 220px; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-#btn-new-project {
-  margin: 10px;
-  padding: 7px 10px;
-  background: var(--accent-dim);
-  border: 1px solid var(--accent);
-  color: var(--accent);
-  font-family: Georgia, serif;
-  font-size: 11px;
-  letter-spacing: 1px;
-  cursor: pointer;
-  border-radius: 3px;
-  transition: background 0.2s;
-  flex-shrink: 0;
-}
-#btn-new-project:hover { background: var(--accent); color: var(--bg); }
-#project-tree {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0 6px 10px;
-}
-#project-tree::-webkit-scrollbar { width: 4px; }
-#project-tree::-webkit-scrollbar-track { background: transparent; }
-#project-tree::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-.project-group { margin-bottom: 4px; }
-.project-header {
-  display: flex;
-  align-items: center;
-  padding: 5px 6px;
-  cursor: pointer;
-  border-radius: 3px;
-  font-size: 11px;
-  letter-spacing: 1px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  transition: background 0.15s;
-  gap: 6px;
-}
-.project-header:hover { background: var(--accent-dim); color: var(--text); }
-.project-header .chevron { font-size: 9px; transition: transform 0.2s; }
-.project-header.open .chevron { transform: rotate(90deg); }
-.project-nodes { padding-left: 14px; }
-.tree-node-item {
-  display: flex;
-  align-items: center;
-  padding: 4px 6px;
-  cursor: pointer;
-  border-radius: 3px;
-  font-size: 12px;
-  color: var(--text-muted);
-  gap: 6px;
-  transition: background 0.15s, color 0.15s;
-}
-.tree-node-item:hover { background: var(--accent-dim); color: var(--text); }
-.tree-node-item.selected { color: var(--accent); background: var(--accent-dim); }
-.tree-node-item .node-status-dot {
-  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
-}
-/* ── Canvas ── */
-#canvas-wrap {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-  background: var(--bg);
-}
-#drawflow {
-  width: 100%;
-  height: 100%;
-  background-image:
-    radial-gradient(circle, var(--border) 1px, transparent 1px);
-  background-size: 28px 28px;
-}
-/* Drawflow overrides */
-.drawflow { background: transparent !important; }
-.drawflow .drawflow-node {
-  background: var(--surface) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 6px !important;
-  padding: 0 !important;
-  min-width: 180px !important;
-  width: auto !important;
-  box-shadow: 0 2px 8px var(--shadow) !important;
-  cursor: pointer !important;
-}
-.drawflow .drawflow-node.selected {
-  border-color: var(--accent) !important;
-  box-shadow: 0 0 0 2px var(--accent-dim), 0 2px 12px var(--shadow) !important;
-}
-.drawflow .drawflow-node .drawflow_content_node { padding: 0; }
-/* Hide resize handle */
-.drawflow .drawflow-node .drawflow-node-resize { display: none !important; }
-/* Connection lines */
-.drawflow .connection .main-path {
-  stroke: var(--border) !important;
-  stroke-width: 1.5 !important;
-}
-/* Input/output ports */
-.drawflow .drawflow-node .input, .drawflow .drawflow-node .output {
-  background: var(--border) !important;
-  border: 1px solid var(--surface) !important;
-  width: 10px !important; height: 10px !important;
-}
-.drawflow .drawflow-node .input:hover, .drawflow .drawflow-node .output:hover {
-  background: var(--accent) !important;
-}
-
-/* ── Node Card ── */
-.node-card {
-  padding: 10px 12px;
-  min-width: 180px;
-  user-select: none;
-}
-.node-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.node-card-title {
-  font-size: 13px;
-  font-family: Georgia, serif;
-  color: var(--text);
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.status-badge {
-  font-size: 9px;
-  letter-spacing: 1px;
-  padding: 2px 6px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-family: Georgia, serif;
-  text-transform: uppercase;
-  flex-shrink: 0;
-  transition: opacity 0.2s;
-  border: 1px solid transparent;
-}
-.status-badge:hover { opacity: 0.75; }
-.status-badge.idea    { color: var(--text-muted); border-color: var(--border); }
-.status-badge.active  { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
-.status-badge.done    { color: #60a870; border-color: #60a870; background: rgba(96,168,112,0.1); }
-.status-badge.dropped { color: #888; border-color: #444; background: rgba(100,100,100,0.1); text-decoration: line-through; }
-
-/* ── Right Panel ── */
-#right-panel {
-  width: 320px;
-  min-width: 320px;
-  background: var(--surface);
-  border-left: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  transform: translateX(100%);
-  transition: transform 0.25s ease;
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  z-index: 60;
-  overflow: hidden;
-}
-#right-panel.open { transform: translateX(0); }
-#panel-header {
-  padding: 12px 14px 10px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  flex-shrink: 0;
-}
-#panel-title {
-  flex: 1;
-  font-size: 22px;
-  font-weight: normal;
-  font-family: Georgia, serif;
-  color: var(--text);
-  border: none;
-  background: transparent;
-  outline: none;
-  line-height: 1.3;
-  min-width: 0;
-}
-#panel-title:focus { border-bottom: 1px solid var(--accent); }
-#panel-header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-#btn-panel-close {
-  background: none; border: none; color: var(--text-muted);
-  cursor: pointer; font-size: 18px; padding: 2px 4px;
-  line-height: 1; transition: color 0.2s;
-}
-#btn-panel-close:hover { color: var(--text); }
-#panel-toolbar {
-  display: flex;
-  gap: 2px;
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-#panel-toolbar button {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-family: Georgia, serif;
-  font-size: 11px;
-  letter-spacing: 1px;
-  padding: 4px 7px;
-  border-radius: 3px;
-  transition: color 0.2s, background 0.2s;
-}
-#panel-toolbar button:hover { color: var(--text); background: var(--accent-dim); }
-#panel-editor {
-  flex: 1;
-  padding: 14px;
-  overflow-y: auto;
-  outline: none;
-  font-family: Georgia, serif;
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--text);
-  caret-color: var(--accent);
-}
-#panel-editor::-webkit-scrollbar { width: 4px; }
-#panel-editor::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-#panel-editor h1 { font-size: 18px; font-weight: normal; margin: 0 0 8px; color: var(--accent); }
-#panel-editor h2 { font-size: 15px; font-weight: normal; margin: 8px 0 4px; color: var(--text); }
-#panel-editor ul { padding-left: 18px; }
-#panel-editor li { margin: 2px 0; }
-#panel-editor img { max-width: 100%; border-radius: 4px; margin: 6px 0; }
-#panel-footer {
-  padding: 8px 14px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex-shrink: 0;
-}
-#panel-timestamp { font-size: 11px; color: var(--text-muted); letter-spacing: 0.5px; }
-#panel-tags {
-  background: none;
-  border: none;
-  border-bottom: 1px solid var(--border);
-  color: var(--text-muted);
-  font-family: Georgia, serif;
-  font-size: 12px;
-  padding: 3px 0;
-  outline: none;
-  width: 100%;
-  transition: border-color 0.2s;
-}
-#panel-tags:focus { border-color: var(--accent); color: var(--text); }
-#panel-tags::placeholder { color: var(--text-muted); opacity: 0.6; }
-#img-input { display: none; }
-/* ── Timeline ── */
-#timeline {
-  height: 50px;
-  min-height: 50px;
-  background: var(--surface);
-  border-top: 1px solid transparent;
-  background-image: linear-gradient(to bottom, var(--accent-dim) 0px, transparent 1px);
-  position: relative;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  padding: 0 14px;
-  overflow: hidden;
-}
-#timeline-track {
-  position: absolute;
-  left: 80px; right: 80px;
-  top: 0; bottom: 0;
-  display: flex;
-  align-items: center;
-}
-#timeline-line {
-  position: absolute;
-  left: 0; right: 0;
-  height: 1px;
-  background: var(--border);
-}
-#timeline-scrubber {
-  position: absolute;
-  top: 0; bottom: 0;
-  width: 1px;
-  background: var(--accent);
-  left: 50%;
-  cursor: ew-resize;
-  z-index: 5;
-}
-#timeline-scrubber::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) rotate(45deg);
-  width: 8px; height: 8px;
-  background: var(--accent);
-  border: 1px solid var(--surface);
-}
-.timeline-dot {
-  position: absolute;
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--text-muted);
-  border: 1px solid var(--surface);
-  transform: translateX(-50%);
-  cursor: pointer;
-  transition: background 0.2s, transform 0.2s;
-  z-index: 3;
-}
-.timeline-dot:hover { background: var(--accent); transform: translateX(-50%) scale(1.4); }
-.timeline-dot .dot-tooltip {
-  position: absolute;
-  bottom: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-size: 10px;
-  font-family: Georgia, serif;
-  padding: 3px 7px;
-  border-radius: 3px;
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s;
-  z-index: 10;
-}
-.timeline-dot:hover .dot-tooltip { opacity: 1; }
-#timeline-label-left {
-  position: absolute;
-  left: 14px;
-  font-size: 10px;
-  color: var(--text-muted);
-  font-family: Georgia, serif;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-}
-#timeline-label-right {
-  position: absolute;
-  right: 14px;
-  font-size: 10px;
-  color: var(--text-muted);
-  font-family: Georgia, serif;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-}
-
-/* ── SVG Keyword Overlay ── */
-#keyword-svg {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  pointer-events: none;
-  z-index: 10;
-  overflow: visible;
-}
-.keyword-line {
-  stroke: #c8a060;
-  stroke-width: 1.5;
-  stroke-dasharray: 5 4;
-  opacity: 0.5;
-  fill: none;
-}
-
-/* ── Modals / Overlays ── */
-#modal-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 200;
-  align-items: center;
-  justify-content: center;
-}
-#modal-overlay.show { display: flex; }
-#modal-box {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 20px;
-  min-width: 280px;
-  max-width: 400px;
-}
-#modal-box h2 { font-size: 14px; font-weight: normal; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 14px; }
-#modal-input {
-  width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-family: Georgia, serif;
-  font-size: 13px;
-  padding: 7px 10px;
-  border-radius: 3px;
-  outline: none;
-  margin-bottom: 12px;
-}
-#modal-input:focus { border-color: var(--accent); }
-.modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
-.modal-btns button {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  font-family: Georgia, serif;
-  font-size: 11px;
-  letter-spacing: 1px;
-  padding: 5px 12px;
-  border-radius: 3px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.modal-btns button.primary { border-color: var(--accent); color: var(--accent); }
-.modal-btns button:hover { background: var(--accent-dim); color: var(--text); }
+:root{--bg:#0f0f0f;--surface:#1a1a1a;--border:#2a2a2a;--text:#ccc;--text-muted:#555;--accent:#c8a060;--accent-dim:rgba(200,160,96,0.15);}
+[data-theme="parchment"]{--bg:#f5f0e8;--surface:#ede8dc;--border:#d0c8b8;--text:#3a3020;--text-muted:#8a7a60;--accent:#8a6030;--accent-dim:rgba(138,96,48,0.12);}
+[data-theme="dusk"]{--bg:#1a1020;--surface:#241830;--border:#3a2850;--text:#d0c0e0;--text-muted:#806090;--accent:#a080d0;--accent-dim:rgba(160,128,208,0.15);}
+[data-theme="forest"]{--bg:#0a1410;--surface:#121e18;--border:#1e3028;--text:#b0d0b8;--text-muted:#507060;--accent:#60a870;--accent-dim:rgba(96,168,112,0.15);}
+[data-theme="minimal"]{--bg:#fff;--surface:#f8f8f8;--border:#e0e0e0;--text:#222;--text-muted:#999;--accent:#555;--accent-dim:rgba(85,85,85,0.1);}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;overflow:hidden;}
+#toolbar{position:fixed;top:0;left:0;right:0;height:44px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:10px;z-index:1000;}
+#btn-sidebar{background:none;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:4px 6px;}
+#btn-sidebar:hover{color:var(--text);}
+#tb-title{font-size:11px;letter-spacing:3px;color:var(--text-muted);margin-right:4px;}
+.tab-btn{background:none;border:none;color:var(--text-muted);font-size:11px;letter-spacing:1px;cursor:pointer;padding:4px 10px;border-bottom:2px solid transparent;font-family:'Outfit',sans-serif;}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+#search-input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Outfit',sans-serif;font-size:11px;padding:4px 10px;width:150px;outline:none;margin-left:auto;}
+#search-input:focus{border-color:var(--accent);}
+#search-input::placeholder{color:var(--text-muted);}
+.theme-dot{width:11px;height:11px;border-radius:50%;cursor:pointer;border:2px solid transparent;flex-shrink:0;}
+.theme-dot.active{border-color:var(--text);}
+.tb-btn{background:none;border:1px solid var(--border);color:var(--text-muted);padding:3px 10px;font-size:10px;letter-spacing:1px;cursor:pointer;font-family:'Outfit',sans-serif;}
+.tb-btn:hover{border-color:var(--accent);color:var(--text);}
+#layout{position:fixed;top:44px;left:0;right:0;bottom:50px;display:flex;}
+#sidebar{width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:width 0.2s,min-width 0.2s;overflow:hidden;}
+#sidebar.collapsed{width:0;min-width:0;}
+#sidebar-inner{width:220px;display:flex;flex-direction:column;height:100%;}
+#btn-new-project{margin:10px;padding:6px 10px;background:none;border:1px solid var(--border);color:var(--text-muted);font-family:'Outfit',sans-serif;font-size:11px;letter-spacing:1px;cursor:pointer;}
+#btn-new-project:hover{border-color:var(--accent);color:var(--accent);}
+#project-list{flex:1;overflow-y:auto;padding:0 8px 8px;}
+.proj-item{padding:6px 8px;font-size:12px;cursor:pointer;border-radius:2px;display:flex;justify-content:space-between;align-items:center;color:var(--text-muted);}
+.proj-item:hover{background:var(--accent-dim);color:var(--text);}
+.proj-item.active{color:var(--accent);background:var(--accent-dim);}
+.proj-count{font-size:10px;color:var(--text-muted);}
+#canvas-wrap{flex:1;position:relative;overflow:hidden;}
+#drawflow{width:100%;height:100%;}
+.drawflow{background:var(--bg);}
+.drawflow .drawflow-node{background:transparent;border:none;padding:0;}
+.drawflow .drawflow-node.selected .thread-node{border-color:var(--accent)!important;}
+.drawflow .connection .main-path{stroke:var(--border);stroke-width:1.5;}
+.thread-node{background:var(--surface);border:1px solid var(--border);border-radius:3px;min-width:200px;cursor:pointer;transition:border-color 0.15s;}
+.thread-node:hover{border-color:var(--text-muted);}
+.thread-node.status-active{border-left:3px solid #c8a060;}
+.thread-node.status-done{border-left:3px solid #60a870;}
+.thread-node.status-dropped{border-left:3px solid #a06060;opacity:0.6;}
+.thread-node.search-match{box-shadow:0 0 0 2px var(--accent);}
+.node-header{padding:8px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.node-title-text{font-size:13px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.node-status{font-size:9px;padding:2px 6px;border-radius:2px;flex-shrink:0;cursor:pointer;letter-spacing:0.5px;text-transform:uppercase;}
+.node-status.idea{background:#2a2a3a;color:#8a8aaa;}
+.node-status.active{background:#3a2a0a;color:#c8a060;}
+.node-status.done{background:#0a2a1a;color:#60a880;}
+.node-status.dropped{background:#2a0a0a;color:#a86060;}
+#relation-view{flex:1;display:none;position:relative;overflow:hidden;background:var(--bg);}
+#relation-view.visible{display:block;}
+#relation-svg{width:100%;height:100%;}
+#right-panel{width:340px;min-width:340px;background:var(--surface);border-left:1px solid var(--border);transform:translateX(100%);transition:transform 0.2s;display:flex;flex-direction:column;overflow:hidden;}
+#right-panel.open{transform:translateX(0);}
+#rp-header{padding:12px 14px 8px;border-bottom:1px solid var(--border);}
+#rp-title-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;}
+#rp-title{flex:1;font-size:20px;font-weight:300;color:var(--text);outline:none;background:transparent;border:none;font-family:'Outfit',sans-serif;line-height:1.3;}
+#rp-status{font-size:10px;padding:3px 8px;border-radius:2px;cursor:pointer;flex-shrink:0;margin-top:4px;text-transform:uppercase;letter-spacing:0.5px;}
+#rp-close{background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;flex-shrink:0;line-height:1;}
+#rp-close:hover{color:var(--text);}
+#rp-editor-toolbar{padding:6px 14px;border-bottom:1px solid var(--border);display:flex;gap:4px;flex-wrap:wrap;}
+.ed-btn{background:none;border:1px solid var(--border);color:var(--text-muted);font-size:10px;padding:2px 7px;cursor:pointer;font-family:'Outfit',sans-serif;letter-spacing:0.5px;}
+.ed-btn:hover{border-color:var(--accent);color:var(--accent);}
+#rp-editor{flex:1;padding:14px;overflow-y:auto;outline:none;font-size:13px;line-height:1.7;color:var(--text);}
+#rp-editor:empty::before{content:attr(data-placeholder);color:var(--text-muted);pointer-events:none;}
+#rp-editor mark.link-anchor{background:var(--accent-dim);color:var(--accent);border-radius:2px;padding:0 2px;cursor:pointer;}
+#rp-editor img{max-width:100%;border-radius:2px;margin:4px 0;display:block;}
+#rp-editor h1{font-size:18px;font-weight:400;margin:8px 0 4px;}
+#rp-editor h2{font-size:15px;font-weight:400;margin:6px 0 3px;}
+#rp-editor ul{padding-left:18px;}
+#rp-tags-area{padding:8px 14px;border-top:1px solid var(--border);}
+#rp-tags-input{background:transparent;border:none;outline:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:11px;width:100%;}
+#rp-tags-input::placeholder{color:var(--text-muted);}
+.tag-pill{display:inline-block;background:var(--accent-dim);color:var(--accent);font-size:10px;padding:2px 7px;border-radius:10px;margin:2px;}
+#rp-footer{padding:6px 14px;border-top:1px solid var(--border);}
+#rp-timestamp{font-size:10px;color:var(--text-muted);}
+#kw-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;}
+#timeline{position:fixed;bottom:0;left:0;right:0;height:50px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;z-index:1000;}
+#tl-range{font-size:10px;color:var(--text-muted);min-width:80px;}
+#tl-track{flex:1;height:2px;background:var(--border);position:relative;cursor:pointer;}
+#tl-scrubber{position:absolute;top:50%;transform:translate(-50%,-50%) rotate(45deg);width:8px;height:8px;background:var(--text-muted);cursor:ew-resize;}
+#tl-dots{position:absolute;top:50%;left:0;right:0;transform:translateY(-50%);height:20px;}
+#tl-pos{font-size:10px;color:var(--text-muted);min-width:100px;text-align:right;}
+.tl-tooltip{position:absolute;bottom:16px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:10px;padding:2px 6px;white-space:nowrap;pointer-events:none;transform:translateX(-50%);}
 </style>
 </head>
 <body>
-<div id="app">
-  <!-- Toolbar -->
-  <div id="toolbar">
-    <button id="btn-sidebar-toggle" title="Toggle sidebar">☰</button>
-    <span id="toolbar-title">THREAD IT</span>
-    <div id="theme-switcher">
-      <div class="theme-dot active" data-theme="ink" title="Ink"></div>
-      <div class="theme-dot" data-theme="parchment" title="Parchment"></div>
-      <div class="theme-dot" data-theme="dusk" title="Dusk"></div>
-      <div class="theme-dot" data-theme="forest" title="Forest"></div>
-      <div class="theme-dot" data-theme="minimal" title="Minimal"></div>
-    </div>
-    <div id="toolbar-actions">
-      <button id="btn-export" title="Export JSON">EXPORT</button>
-      <button id="btn-import" title="Import JSON">IMPORT</button>
-      <input type="file" id="import-input" accept=".json" style="display:none">
+<div id="toolbar">
+  <button id="btn-sidebar">☰</button>
+  <span id="tb-title">THREAD IT</span>
+  <button class="tab-btn active" id="tab-canvas">CANVAS</button>
+  <button class="tab-btn" id="tab-relations">RELATIONS</button>
+  <input id="search-input" type="text" placeholder="search nodes...">
+  <div id="theme-dots" style="display:flex;gap:5px;align-items:center;">
+    <div class="theme-dot active" data-theme="ink" style="background:#c8a060;" title="ink"></div>
+    <div class="theme-dot" data-theme="parchment" style="background:#8a6030;" title="parchment"></div>
+    <div class="theme-dot" data-theme="dusk" style="background:#a080d0;" title="dusk"></div>
+    <div class="theme-dot" data-theme="forest" style="background:#60a870;" title="forest"></div>
+    <div class="theme-dot" data-theme="minimal" style="background:#999;" title="minimal"></div>
+  </div>
+  <button class="tb-btn" id="btn-add">+ NODE</button>
+  <button class="tb-btn" id="btn-export">EXPORT</button>
+  <button class="tb-btn" id="btn-import">IMPORT</button>
+</div>
+<div id="layout">
+  <div id="sidebar">
+    <div id="sidebar-inner">
+      <button id="btn-new-project">＋ PROJECT</button>
+      <div id="project-list"></div>
     </div>
   </div>
-
-  <!-- Main Body -->
-  <div id="main-body">
-    <!-- Left Sidebar -->
-    <div id="sidebar">
-      <div id="sidebar-inner">
-        <button id="btn-new-project">+ NEW PROJECT</button>
-        <div id="project-tree"></div>
-      </div>
-    </div>
-
-    <!-- Canvas -->
-    <div id="canvas-wrap">
-      <div id="drawflow"></div>
-      <svg id="keyword-svg"></svg>
-    </div>
-
-    <!-- Right Panel -->
-    <div id="right-panel">
-      <div id="panel-header">
-        <input id="panel-title" type="text" placeholder="Node title…" spellcheck="false">
-        <div id="panel-header-right">
-          <span id="panel-status-badge" class="status-badge idea">idea</span>
-          <button id="btn-panel-close">×</button>
-        </div>
-      </div>
-      <div id="panel-toolbar">
-        <button data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
-        <button data-cmd="italic" title="Italic (Ctrl+I)"><i>I</i></button>
-        <button data-cmd="h1" title="Heading 1">H1</button>
-        <button data-cmd="h2" title="Heading 2">H2</button>
-        <button data-cmd="ul" title="List">UL</button>
-        <button data-cmd="img" title="Insert image">IMG</button>
-        <input type="file" id="img-input" accept="image/*">
-      </div>
-      <div id="panel-editor" contenteditable="true" spellcheck="false"></div>
-      <div id="panel-footer">
-        <div id="panel-timestamp"></div>
-        <input id="panel-tags" type="text" placeholder="#tags space-separated">
-      </div>
-    </div>
+  <div id="canvas-wrap">
+    <div id="drawflow"></div>
+    <svg id="kw-overlay"></svg>
   </div>
-
-  <!-- Timeline -->
-  <div id="timeline">
-    <span id="timeline-label-left"></span>
-    <div id="timeline-track">
-      <div id="timeline-line"></div>
-      <div id="timeline-scrubber"></div>
+  <div id="relation-view">
+    <svg id="relation-svg"></svg>
+  </div>
+  <div id="right-panel">
+    <div id="rp-header">
+      <div id="rp-title-row">
+        <div id="rp-title" contenteditable="true" spellcheck="false"></div>
+        <span id="rp-status" class="node-status idea">idea</span>
+        <button id="rp-close">×</button>
+      </div>
     </div>
-    <span id="timeline-label-right"></span>
+    <div id="rp-editor-toolbar">
+      <button class="ed-btn" data-cmd="bold">B</button>
+      <button class="ed-btn" data-cmd="italic">I</button>
+      <button class="ed-btn" data-cmd="h1">H1</button>
+      <button class="ed-btn" data-cmd="h2">H2</button>
+      <button class="ed-btn" data-cmd="ul">UL</button>
+      <button class="ed-btn" data-cmd="anchor">🔗</button>
+      <button class="ed-btn" data-cmd="image">📷</button>
+    </div>
+    <div id="rp-editor" contenteditable="true" data-placeholder="write notes, paste links, use #tags..."></div>
+    <div id="rp-tags-area">
+      <div id="rp-tags-pills"></div>
+      <input id="rp-tags-input" type="text" placeholder="#add tags...">
+    </div>
+    <div id="rp-footer"><span id="rp-timestamp"></span></div>
   </div>
 </div>
-
-<!-- Modal -->
-<div id="modal-overlay">
-  <div id="modal-box">
-    <h2 id="modal-title">NEW PROJECT</h2>
-    <input id="modal-input" type="text" placeholder="Project name…">
-    <div class="modal-btns">
-      <button id="modal-cancel">CANCEL</button>
-      <button id="modal-ok" class="primary">CREATE</button>
-    </div>
+<div id="timeline">
+  <span id="tl-range">—</span>
+  <div id="tl-track">
+    <svg id="tl-dots" width="100%" height="20"></svg>
+    <div id="tl-scrubber" style="left:100%;"></div>
   </div>
+  <span id="tl-pos">all time</span>
 </div>
+<input type="file" id="import-file" accept=".json" style="display:none">
+<input type="file" id="image-file" accept="image/*" style="display:none">
+<script src="https://cdn.jsdelivr.net/npm/drawflow/dist/drawflow.min.js"></script>
 <script>
-// ── Data Model ──
-let nodeData = {};
-let projects = {}; // { name: { nodes: [id,...] } }
-let selectedNodeId = null;
-let currentTheme = 'ink';
-const STORAGE_KEY = 'threadit-v2';
-
-// ── Drawflow Init ──
 const dfEl = document.getElementById('drawflow');
 const editor = new Drawflow(dfEl);
-editor.reroute = false;
-editor.reroute_fix_curvature = false;
-editor.force_first_input = false;
+editor.reroute = true;
 editor.start();
 
-// Disable default double-click add node
-editor.on('nodeCreated', () => {});
+const nodeData = {};
+let projects = ['Default'];
+let currentProject = 'All';
+let activeNodeId = null;
+let tlScrubTime = null;
+let tlDragging = false;
+const STATUS_CYCLE = ['idea','active','done','dropped'];
 
-// ── Load / Save ──
-function save() {
-  const df = editor.export();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodeData, projects, df, theme: currentTheme }));
+function uid() { return Math.random().toString(36).slice(2,10); }
+function formatTs(ts) {
+  const d = new Date(ts);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')
+    +' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
 }
 
-function load() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return;
-  try {
-    const s = JSON.parse(raw);
-    nodeData = s.nodeData || {};
-    projects = s.projects || {};
-    if (s.theme) applyTheme(s.theme, false);
-    if (s.df) {
-      editor.import(s.df);
-      // Re-attach click handlers to restored nodes
-      Object.keys(nodeData).forEach(id => {
-        attachNodeHandlers(id);
-        updateNodeCard(id);
-      });
+// Node HTML (compact card only)
+function nodeHTML(id) {
+  const d = nodeData[id] || {};
+  const status = d.status || 'idea';
+  const title = (d.title || 'New Idea').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return '<div class="thread-node status-'+status+'" data-nid="'+id+'">'
+    +'<div class="node-header">'
+    +'<span class="node-title-text">'+title+'</span>'
+    +'<span class="node-status '+status+'" data-nid="'+id+'">'+status+'</span>'
+    +'</div></div>';
+}
+
+function addNode(x, y, data) {
+  const id = uid();
+  nodeData[id] = Object.assign({
+    title: 'New Idea', content: '', status: 'idea',
+    timestamp: Date.now(), tags: [], project: currentProject === 'All' ? 'Default' : currentProject,
+    anchors: []
+  }, data);
+  const dfId = editor.addNode('thread',1,1,x,y,'',{},nodeHTML(id));
+  nodeData[id]._dfId = dfId;
+  // map dfId -> our id
+  dfIdMap[dfId] = id;
+  setTimeout(() => { attachNodeClick(dfId, id); updateTimeline(); updateKwOverlay(); saveData(); }, 80);
+  return id;
+}
+
+const dfIdMap = {};
+
+function attachNodeClick(dfId, nid) {
+  const el = dfEl.querySelector('.drawflow-node[id="node-'+dfId+'"]');
+  if (!el) return;
+  el.addEventListener('click', function(e) {
+    if (e.target.classList.contains('node-status')) {
+      e.stopPropagation();
+      cycleStatus(nid);
+      return;
     }
-    renderTree();
-    renderTimeline();
-    renderKeywordLines();
-  } catch(e) { console.warn('Load failed', e); }
-}
-
-// ── Theme ──
-function applyTheme(name, doSave = true) {
-  currentTheme = name;
-  document.documentElement.setAttribute('data-theme', name === 'ink' ? '' : name);
-  document.querySelectorAll('.theme-dot').forEach(d => {
-    d.classList.toggle('active', d.dataset.theme === name);
-  });
-  if (doSave) save();
-  setTimeout(renderKeywordLines, 50);
-}
-
-document.querySelectorAll('.theme-dot').forEach(dot => {
-  dot.addEventListener('click', () => applyTheme(dot.dataset.theme));
-});
-
-// ── Project Management ──
-function createProject(name) {
-  if (!name || projects[name]) return;
-  projects[name] = { nodes: [] };
-  renderTree();
-  save();
-}
-
-function addNodeToProject(nodeId, projectName) {
-  if (!projects[projectName]) return;
-  if (!projects[projectName].nodes.includes(nodeId)) {
-    projects[projectName].nodes.push(nodeId);
-  }
-}
-
-// ── Add Node ──
-let nodeCounter = 0;
-function addNode(projectName, title, x, y) {
-  const id_hint = ++nodeCounter;
-  const data = {
-    title: title || 'Untitled',
-    content: '',
-    status: 'idea',
-    timestamp: Date.now(),
-    tags: [],
-    project: projectName
-  };
-  const html = buildNodeCardHTML(data);
-  const nodeId = editor.addNode(
-    'node_' + id_hint, 1, 1, x || 200, y || 200,
-    'df-node', { nodeId: id_hint }, html
-  );
-  // Drawflow returns the numeric id
-  const realId = nodeId;
-  data._dfId = realId;
-  nodeData[realId] = data;
-  addNodeToProject(realId, projectName);
-  attachNodeHandlers(realId);
-  renderTree();
-  renderTimeline();
-  save();
-  return realId;
-}
-
-function buildNodeCardHTML(data) {
-  const statusClass = data.status || 'idea';
-  const statusLabel = statusClass;
-  return `<div class="node-card">
-    <div class="node-card-header">
-      <span class="node-card-title">${escHtml(data.title)}</span>
-      <span class="status-badge ${statusClass}">${statusLabel}</span>
-    </div>
-  </div>`;
-}
-
-function updateNodeCard(id) {
-  const data = nodeData[id];
-  if (!data) return;
-  const el = document.querySelector(`.drawflow-node[id="node-${id}"] .drawflow_content_node`);
-  if (el) el.innerHTML = buildNodeCardHTML(data);
-  attachNodeHandlers(id);
-}
-
-function attachNodeHandlers(id) {
-  const nodeEl = document.querySelector(`.drawflow-node[id="node-${id}"]`);
-  if (!nodeEl) return;
-  // Click on card → open panel (but not on status badge)
-  const card = nodeEl.querySelector('.node-card');
-  if (card) {
-    card.addEventListener('click', (e) => {
-      if (e.target.classList.contains('status-badge')) return;
-      e.stopPropagation();
-      selectNode(id);
-    });
-  }
-  // Status badge click
-  const badge = nodeEl.querySelector('.status-badge');
-  if (badge) {
-    badge.addEventListener('click', (e) => {
-      e.stopPropagation();
-      cycleStatus(id);
-    });
-  }
-}
-
-// ── Status Cycle ──
-const STATUS_CYCLE = ['idea', 'active', 'done', 'dropped'];
-function cycleStatus(id) {
-  const data = nodeData[id];
-  if (!data) return;
-  const idx = STATUS_CYCLE.indexOf(data.status);
-  data.status = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
-  updateNodeCard(id);
-  if (selectedNodeId === id) {
-    const badge = document.getElementById('panel-status-badge');
-    badge.className = 'status-badge ' + data.status;
-    badge.textContent = data.status;
-  }
-  renderTree();
-  save();
-}
-
-// ── Select Node ──
-function selectNode(id) {
-  selectedNodeId = id;
-  editor.selectNode(id);
-  openPanel(id);
-  // Highlight in tree
-  document.querySelectorAll('.tree-node-item').forEach(el => {
-    el.classList.toggle('selected', el.dataset.nodeId == id);
+    openPanel(nid);
   });
 }
 
-// ── Delete Node ──
-function deleteNode(id) {
-  editor.removeNodeId('node-' + id);
-  delete nodeData[id];
-  Object.values(projects).forEach(p => {
-    p.nodes = p.nodes.filter(n => n != id);
-  });
-  if (selectedNodeId == id) closePanel();
-  renderTree();
-  renderTimeline();
-  renderKeywordLines();
-  save();
+function cycleStatus(nid) {
+  if (!nodeData[nid]) return;
+  const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf(nodeData[nid].status)+1) % STATUS_CYCLE.length];
+  nodeData[nid].status = next;
+  refreshNodeCard(nid);
+  if (activeNodeId === nid) updatePanelStatus();
+  saveData();
 }
 
-// ── Right Panel ──
-const rightPanel = document.getElementById('right-panel');
-const panelTitle = document.getElementById('panel-title');
-const panelEditor = document.getElementById('panel-editor');
-const panelTags = document.getElementById('panel-tags');
-const panelTimestamp = document.getElementById('panel-timestamp');
-const panelStatusBadge = document.getElementById('panel-status-badge');
+function refreshNodeCard(nid) {
+  const d = nodeData[nid]; if (!d) return;
+  const dfId = d._dfId;
+  const el = dfEl.querySelector('.drawflow-node[id="node-'+dfId+'"] .thread-node');
+  if (!el) return;
+  el.className = 'thread-node status-'+d.status;
+  const titleEl = el.querySelector('.node-title-text');
+  if (titleEl) titleEl.textContent = d.title;
+  const statusEl = el.querySelector('.node-status');
+  if (statusEl) { statusEl.className = 'node-status '+d.status; statusEl.textContent = d.status; }
+}
 
-function openPanel(id) {
-  const data = nodeData[id];
-  if (!data) return;
-  panelTitle.value = data.title;
-  panelEditor.innerHTML = data.content || '';
-  panelTags.value = data.tags ? data.tags.join(' ') : '';
-  panelStatusBadge.className = 'status-badge ' + data.status;
-  panelStatusBadge.textContent = data.status;
-  const d = new Date(data.timestamp);
-  panelTimestamp.textContent = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-  rightPanel.classList.add('open');
+// RIGHT PANEL
+function openPanel(nid) {
+  activeNodeId = nid;
+  const d = nodeData[nid]; if (!d) return;
+  document.getElementById('rp-title').textContent = d.title;
+  document.getElementById('rp-editor').innerHTML = d.content || '';
+  updatePanelStatus();
+  renderTagPills(d.tags || []);
+  document.getElementById('rp-timestamp').textContent = formatTs(d.timestamp);
+  document.getElementById('right-panel').classList.add('open');
 }
 
 function closePanel() {
-  rightPanel.classList.remove('open');
-  selectedNodeId = null;
-  document.querySelectorAll('.tree-node-item').forEach(el => el.classList.remove('selected'));
+  savePanelToNode();
+  document.getElementById('right-panel').classList.remove('open');
+  activeNodeId = null;
 }
 
-document.getElementById('btn-panel-close').addEventListener('click', closePanel);
-
-// Panel title edit
-panelTitle.addEventListener('input', () => {
-  if (!selectedNodeId) return;
-  nodeData[selectedNodeId].title = panelTitle.value;
-  updateNodeCard(selectedNodeId);
-  renderTree();
-  save();
-});
-
-// Panel editor edit
-panelEditor.addEventListener('input', () => {
-  if (!selectedNodeId) return;
-  nodeData[selectedNodeId].content = panelEditor.innerHTML;
-  extractAndSaveTags(selectedNodeId);
-  renderKeywordLines();
-  save();
-});
-
-// Tags edit
-panelTags.addEventListener('input', () => {
-  if (!selectedNodeId) return;
-  const raw = panelTags.value;
-  nodeData[selectedNodeId].tags = raw.match(/#\w+/g) || [];
-  renderKeywordLines();
-  save();
-});
-
-// Panel status badge click
-panelStatusBadge.addEventListener('click', () => {
-  if (!selectedNodeId) return;
-  cycleStatus(selectedNodeId);
-});
-
-// Extract tags from content
-function extractAndSaveTags(id) {
-  const data = nodeData[id];
-  if (!data) return;
-  const text = panelEditor.innerText || '';
-  const tagsFromContent = text.match(/#\w+/g) || [];
-  const tagsFromField = (panelTags.value.match(/#\w+/g) || []);
-  data.tags = [...new Set([...tagsFromContent, ...tagsFromField])];
-  panelTags.value = data.tags.join(' ');
+function savePanelToNode() {
+  if (!activeNodeId || !nodeData[activeNodeId]) return;
+  nodeData[activeNodeId].title = document.getElementById('rp-title').textContent.trim() || 'Untitled';
+  nodeData[activeNodeId].content = document.getElementById('rp-editor').innerHTML;
+  // extract tags from content
+  const text = document.getElementById('rp-editor').innerText || '';
+  const tagMatches = text.match(/#\w+/g) || [];
+  nodeData[activeNodeId].tags = [...new Set(tagMatches.map(t=>t.toLowerCase()))];
+  refreshNodeCard(activeNodeId);
+  updateKwOverlay();
+  saveData();
 }
 
-// ── Panel Toolbar (formatting) ──
-document.querySelectorAll('#panel-toolbar button[data-cmd]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const cmd = btn.dataset.cmd;
-    panelEditor.focus();
-    if (cmd === 'bold') document.execCommand('bold');
-    else if (cmd === 'italic') document.execCommand('italic');
-    else if (cmd === 'h1') document.execCommand('formatBlock', false, 'h1');
-    else if (cmd === 'h2') document.execCommand('formatBlock', false, 'h2');
-    else if (cmd === 'ul') document.execCommand('insertUnorderedList');
-    else if (cmd === 'img') document.getElementById('img-input').click();
-  });
+function updatePanelStatus() {
+  if (!activeNodeId) return;
+  const s = nodeData[activeNodeId].status;
+  const el = document.getElementById('rp-status');
+  el.className = 'node-status '+s; el.textContent = s;
+}
+
+function renderTagPills(tags) {
+  const pills = document.getElementById('rp-tags-pills');
+  pills.innerHTML = tags.map(t=>'<span class="tag-pill">'+t+'</span>').join('');
+}
+
+document.getElementById('rp-close').addEventListener('click', closePanel);
+document.getElementById('rp-status').addEventListener('click', function() {
+  if (!activeNodeId) return;
+  cycleStatus(activeNodeId);
+});
+document.getElementById('rp-title').addEventListener('input', function() {
+  if (activeNodeId && nodeData[activeNodeId]) {
+    nodeData[activeNodeId].title = this.textContent.trim();
+    refreshNodeCard(activeNodeId);
+    saveData();
+  }
+});
+document.getElementById('rp-editor').addEventListener('input', function() {
+  if (activeNodeId && nodeData[activeNodeId]) {
+    nodeData[activeNodeId].content = this.innerHTML;
+    const text = this.innerText || '';
+    const tagMatches = text.match(/#\w+/g) || [];
+    nodeData[activeNodeId].tags = [...new Set(tagMatches.map(t=>t.toLowerCase()))];
+    renderTagPills(nodeData[activeNodeId].tags);
+    updateKwOverlay();
+    saveData();
+  }
 });
 
-document.getElementById('img-input').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+// Editor toolbar
+document.getElementById('rp-editor-toolbar').addEventListener('click', function(e) {
+  const btn = e.target.closest('.ed-btn'); if (!btn) return;
+  const cmd = btn.dataset.cmd;
+  const ed = document.getElementById('rp-editor');
+  ed.focus();
+  if (cmd === 'bold') document.execCommand('bold');
+  else if (cmd === 'italic') document.execCommand('italic');
+  else if (cmd === 'h1') document.execCommand('formatBlock', false, 'h1');
+  else if (cmd === 'h2') document.execCommand('formatBlock', false, 'h2');
+  else if (cmd === 'ul') document.execCommand('insertUnorderedList');
+  else if (cmd === 'anchor') {
+    const sel = window.getSelection();
+    if (sel && sel.toString().length > 0) {
+      const anchorId = uid();
+      document.execCommand('insertHTML', false,
+        '<mark class="link-anchor" data-anchor="'+anchorId+'">'+sel.toString()+'</mark>');
+      if (activeNodeId && nodeData[activeNodeId]) {
+        nodeData[activeNodeId].anchors = nodeData[activeNodeId].anchors || [];
+        nodeData[activeNodeId].anchors.push({id: anchorId, text: sel.toString()});
+        saveData();
+      }
+    }
+  }
+  else if (cmd === 'image') document.getElementById('image-file').click();
+});
+
+document.getElementById('image-file').addEventListener('change', function(e) {
+  const file = e.target.files[0]; if (!file) return;
   const reader = new FileReader();
-  reader.onload = (ev) => {
-    panelEditor.focus();
-    document.execCommand('insertHTML', false, `<img src="${ev.target.result}" alt="image">`);
-    if (selectedNodeId) {
-      nodeData[selectedNodeId].content = panelEditor.innerHTML;
-      save();
+  reader.onload = function(ev) {
+    document.getElementById('rp-editor').focus();
+    document.execCommand('insertHTML', false, '<img src="'+ev.target.result+'" style="max-width:100%">');
+    if (activeNodeId && nodeData[activeNodeId]) {
+      nodeData[activeNodeId].content = document.getElementById('rp-editor').innerHTML;
+      saveData();
     }
   };
   reader.readAsDataURL(file);
   e.target.value = '';
 });
 
-// ── Project Tree Render ──
-function renderTree() {
-  const tree = document.getElementById('project-tree');
-  tree.innerHTML = '';
-  Object.entries(projects).forEach(([name, proj]) => {
-    const group = document.createElement('div');
-    group.className = 'project-group';
-    const header = document.createElement('div');
-    header.className = 'project-header open';
-    header.innerHTML = `<span class="chevron">▶</span><span>${escHtml(name)}</span>
-      <button class="add-node-btn" data-project="${escHtml(name)}" title="Add node" style="margin-left:auto;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:0 2px;">+</button>`;
-    header.querySelector('.add-node-btn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      const cx = 150 + Math.random() * 400;
-      const cy = 100 + Math.random() * 300;
-      addNode(name, 'New Node', cx, cy);
-    });
-    header.addEventListener('click', (e) => {
-      if (e.target.classList.contains('add-node-btn')) return;
-      header.classList.toggle('open');
-      nodesDiv.style.display = header.classList.contains('open') ? '' : 'none';
-    });
-    const nodesDiv = document.createElement('div');
-    nodesDiv.className = 'project-nodes';
-    (proj.nodes || []).forEach(nid => {
-      const nd = nodeData[nid];
-      if (!nd) return;
-      const item = document.createElement('div');
-      item.className = 'tree-node-item' + (selectedNodeId == nid ? ' selected' : '');
-      item.dataset.nodeId = nid;
-      const dotColor = { idea: 'var(--text-muted)', active: 'var(--accent)', done: '#60a870', dropped: '#555' };
-      item.innerHTML = `<span class="node-status-dot" style="background:${dotColor[nd.status] || 'var(--text-muted)'}"></span><span>${escHtml(nd.title)}</span>`;
-      item.addEventListener('click', () => {
-        selectNode(nid);
-        // Scroll canvas to node
-        const nodeEl = document.querySelector(`.drawflow-node[id="node-${nid}"]`);
-        if (nodeEl) editor.selectNode(nid);
-      });
-      nodesDiv.appendChild(item);
-    });
-    group.appendChild(header);
-    group.appendChild(nodesDiv);
-    tree.appendChild(group);
-  });
+// PROJECT SIDEBAR
+function renderProjects() {
+  const list = document.getElementById('project-list');
+  const counts = {};
+  Object.values(nodeData).forEach(d => { counts[d.project] = (counts[d.project]||0)+1; });
+  const all = [['All', Object.keys(nodeData).length], ...projects.map(pr=>[pr, counts[pr]||0])];
+  list.innerHTML = all.map(([name, cnt]) =>
+    '<div class="proj-item'+(currentProject===name?' active':'')+'" data-proj="'+name+'">'
+    +'<span>'+name+'</span><span class="proj-count">'+cnt+'</span></div>'
+  ).join('');
 }
 
-// ── Timeline Render ──
-function renderTimeline() {
-  const track = document.getElementById('timeline-track');
-  // Remove old dots
-  track.querySelectorAll('.timeline-dot').forEach(d => d.remove());
-  const nodes = Object.entries(nodeData);
-  if (nodes.length === 0) {
-    document.getElementById('timeline-label-left').textContent = '';
-    document.getElementById('timeline-label-right').textContent = '';
-    return;
-  }
-  const times = nodes.map(([,d]) => d.timestamp).filter(Boolean);
-  const minT = Math.min(...times);
-  const maxT = Math.max(...times);
-  const range = maxT - minT || 1;
-  const fmt = (t) => new Date(t).toLocaleDateString([], {month:'short', day:'numeric'});
-  document.getElementById('timeline-label-left').textContent = fmt(minT);
-  document.getElementById('timeline-label-right').textContent = fmt(maxT);
-  nodes.forEach(([id, data]) => {
-    if (!data.timestamp) return;
-    const pct = (data.timestamp - minT) / range;
-    const dot = document.createElement('div');
-    dot.className = 'timeline-dot';
-    dot.style.left = (pct * 100) + '%';
-    const tooltip = document.createElement('div');
-    tooltip.className = 'dot-tooltip';
-    tooltip.textContent = data.title;
-    dot.appendChild(tooltip);
-    dot.addEventListener('click', () => selectNode(parseInt(id)));
-    track.appendChild(dot);
+document.getElementById('project-list').addEventListener('click', function(e) {
+  const item = e.target.closest('.proj-item'); if (!item) return;
+  currentProject = item.dataset.proj;
+  renderProjects();
+  filterCanvasByProject();
+  saveData();
+});
+
+document.getElementById('btn-new-project').addEventListener('click', function() {
+  const name = prompt('Project name:'); if (!name || !name.trim()) return;
+  const n = name.trim();
+  if (!projects.includes(n)) { projects.push(n); saveData(); }
+  currentProject = n;
+  renderProjects();
+  filterCanvasByProject();
+});
+
+function filterCanvasByProject() {
+  Object.keys(nodeData).forEach(nid => {
+    const d = nodeData[nid];
+    const dfId = d._dfId;
+    const el = dfEl.querySelector('.drawflow-node[id="node-'+dfId+'"]');
+    if (!el) return;
+    const show = currentProject === 'All' || d.project === currentProject;
+    el.style.display = show ? '' : 'none';
   });
+  updateKwOverlay();
 }
 
-// ── Keyword Connection Lines ──
-function renderKeywordLines() {
-  const svg = document.getElementById('keyword-svg');
-  svg.innerHTML = '';
-  const canvasWrap = document.getElementById('canvas-wrap');
-  const wrapRect = canvasWrap.getBoundingClientRect();
-
-  // Build tag → [nodeIds] map
-  const tagMap = {};
-  Object.entries(nodeData).forEach(([id, data]) => {
-    (data.tags || []).forEach(tag => {
-      if (!tagMap[tag]) tagMap[tag] = [];
-      tagMap[tag].push(id);
-    });
+// SEARCH
+document.getElementById('search-input').addEventListener('input', function() {
+  const q = this.value.trim().toLowerCase();
+  Object.keys(nodeData).forEach(nid => {
+    const d = nodeData[nid];
+    const dfId = d._dfId;
+    const el = dfEl.querySelector('.drawflow-node[id="node-'+dfId+'"]');
+    if (!el) return;
+    if (!q) { el.style.opacity=''; el.querySelector('.thread-node').classList.remove('search-match'); return; }
+    const match = (d.title||'').toLowerCase().includes(q) ||
+      (d.content||'').toLowerCase().includes(q) ||
+      (d.tags||[]).some(t=>t.includes(q));
+    el.style.opacity = match ? '1' : '0.2';
+    el.querySelector('.thread-node').classList.toggle('search-match', match);
   });
+});
 
-  // Draw lines between nodes sharing tags
-  const drawn = new Set();
-  Object.values(tagMap).forEach(ids => {
-    if (ids.length < 2) return;
-    for (let i = 0; i < ids.length; i++) {
-      for (let j = i + 1; j < ids.length; j++) {
-        const key = [ids[i], ids[j]].sort().join('-');
-        if (drawn.has(key)) continue;
-        drawn.add(key);
-        const a = getNodeCenter(ids[i], wrapRect);
-        const b = getNodeCenter(ids[j], wrapRect);
-        if (!a || !b) continue;
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
-        line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
-        line.setAttribute('class', 'keyword-line');
-        svg.appendChild(line);
-      }
-    }
-  });
+// KEYWORD OVERLAY
+function extractTags(content) {
+  const text = content.replace(/<[^>]+>/g,' ');
+  const m = text.match(/#\w+/g);
+  return m ? m.map(t=>t.toLowerCase()) : [];
 }
 
-function getNodeCenter(id, wrapRect) {
-  const el = document.querySelector(`.drawflow-node[id="node-${id}"]`);
-  if (!el) return null;
+function getNodeCenter(dfId) {
+  const el = dfEl.querySelector('.drawflow-node[id="node-'+dfId+'"]');
+  if (!el || el.style.display==='none') return null;
   const r = el.getBoundingClientRect();
-  return {
-    x: r.left - wrapRect.left + r.width / 2,
-    y: r.top - wrapRect.top + r.height / 2
-  };
+  const cr = dfEl.getBoundingClientRect();
+  return {x: r.left-cr.left+r.width/2, y: r.top-cr.top+r.height/2};
 }
 
-// Re-render lines after any drag
-editor.on('nodeMoved', () => { renderKeywordLines(); save(); });
-editor.on('zoom', renderKeywordLines);
-editor.on('translate', renderKeywordLines);
-
-// ── Keyboard Shortcuts ──
-document.addEventListener('keydown', (e) => {
-  // Escape: close panel
-  if (e.key === 'Escape') { closePanel(); return; }
-
-  // Ctrl+B / Ctrl+I in editor
-  if (document.activeElement === panelEditor) {
-    if (e.ctrlKey && e.key === 'b') { e.preventDefault(); document.execCommand('bold'); }
-    if (e.ctrlKey && e.key === 'i') { e.preventDefault(); document.execCommand('italic'); }
-    return;
-  }
-
-  // Delete: remove selected node (only when not in text input)
-  if ((e.key === 'Delete' || e.key === 'Backspace') &&
-      document.activeElement !== panelTitle &&
-      document.activeElement !== panelTags &&
-      document.activeElement !== panelEditor &&
-      document.activeElement.tagName !== 'INPUT') {
-    if (selectedNodeId) { deleteNode(selectedNodeId); }
-  }
-});
-
-// ── Sidebar Toggle ──
-document.getElementById('btn-sidebar-toggle').addEventListener('click', () => {
-  document.getElementById('sidebar').classList.toggle('collapsed');
-  setTimeout(renderKeywordLines, 300);
-});
-
-// ── New Project Modal ──
-let modalCallback = null;
-function showModal(title, placeholder, cb) {
-  document.getElementById('modal-title').textContent = title;
-  document.getElementById('modal-input').value = '';
-  document.getElementById('modal-input').placeholder = placeholder;
-  modalCallback = cb;
-  document.getElementById('modal-overlay').classList.add('show');
-  setTimeout(() => document.getElementById('modal-input').focus(), 50);
-}
-function hideModal() {
-  document.getElementById('modal-overlay').classList.remove('show');
-  modalCallback = null;
-}
-document.getElementById('modal-cancel').addEventListener('click', hideModal);
-document.getElementById('modal-ok').addEventListener('click', () => {
-  const val = document.getElementById('modal-input').value.trim();
-  if (val && modalCallback) modalCallback(val);
-  hideModal();
-});
-document.getElementById('modal-input').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') document.getElementById('modal-ok').click();
-  if (e.key === 'Escape') hideModal();
-});
-document.getElementById('modal-overlay').addEventListener('click', (e) => {
-  if (e.target === document.getElementById('modal-overlay')) hideModal();
-});
-
-document.getElementById('btn-new-project').addEventListener('click', () => {
-  showModal('NEW PROJECT', 'Project name…', (name) => {
-    createProject(name);
-    // Add a starter node
-    addNode(name, 'First Thread', 200, 180);
+function updateKwOverlay() {
+  const svg = document.getElementById('kw-overlay');
+  svg.innerHTML = '';
+  const ids = Object.keys(nodeData);
+  const kwMap = {};
+  ids.forEach(nid => {
+    extractTags(nodeData[nid].content||'').forEach(kw => {
+      if (!kwMap[kw]) kwMap[kw] = [];
+      if (!kwMap[kw].includes(nid)) kwMap[kw].push(nid);
+    });
   });
-});
-
-// ── Export / Import ──
-document.getElementById('btn-export').addEventListener('click', () => {
-  const data = { nodeData, projects, df: editor.export(), theme: currentTheme };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'threadit-export.json';
-  a.click();
-});
-
-document.getElementById('btn-import').addEventListener('click', () => {
-  document.getElementById('import-input').click();
-});
-document.getElementById('import-input').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    try {
-      const s = JSON.parse(ev.target.result);
-      nodeData = s.nodeData || {};
-      projects = s.projects || {};
-      if (s.theme) applyTheme(s.theme, false);
-      if (s.df) {
-        editor.import(s.df);
-        Object.keys(nodeData).forEach(id => { attachNodeHandlers(id); updateNodeCard(id); });
-      }
-      renderTree(); renderTimeline(); renderKeywordLines(); save();
-    } catch(err) { alert('Import failed: ' + err.message); }
-  };
-  reader.readAsText(file);
-  e.target.value = '';
-});
-
-// ── Timeline Scrubber (drag) ──
-(function() {
-  const scrubber = document.getElementById('timeline-scrubber');
-  const track = document.getElementById('timeline-track');
-  let dragging = false;
-  scrubber.addEventListener('mousedown', (e) => { dragging = true; e.preventDefault(); });
-  document.addEventListener('mousemove', (e) => {
-    if (!dragging) return;
-    const rect = track.getBoundingClientRect();
-    let pct = (e.clientX - rect.left) / rect.width;
-    pct = Math.max(0, Math.min(1, pct));
-    scrubber.style.left = (pct * 100) + '%';
-    // Update right label with interpolated date
-    const nodes = Object.values(nodeData);
-    if (nodes.length > 0) {
-      const times = nodes.map(d => d.timestamp).filter(Boolean);
-      const minT = Math.min(...times), maxT = Math.max(...times);
-      const t = minT + pct * (maxT - minT);
-      document.getElementById('timeline-label-right').textContent =
-        new Date(t).toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'});
+  const drawn = new Set();
+  Object.values(kwMap).forEach(grp => {
+    for (let i=0;i<grp.length;i++) for (let j=i+1;j<grp.length;j++) {
+      const key = [grp[i],grp[j]].sort().join('-');
+      if (drawn.has(key)) continue; drawn.add(key);
+      const a = getNodeCenter(nodeData[grp[i]]._dfId);
+      const b = getNodeCenter(nodeData[grp[j]]._dfId);
+      if (!a||!b) continue;
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',a.x); line.setAttribute('y1',a.y);
+      line.setAttribute('x2',b.x); line.setAttribute('y2',b.y);
+      line.setAttribute('stroke','#c8a060'); line.setAttribute('stroke-width','1');
+      line.setAttribute('stroke-dasharray','4 4'); line.setAttribute('opacity','0.4');
+      svg.appendChild(line);
     }
   });
-  document.addEventListener('mouseup', () => { dragging = false; });
-  // Double-click reset
-  document.getElementById('timeline').addEventListener('dblclick', () => {
-    scrubber.style.left = '50%';
-    renderTimeline();
+}
+
+editor.on('translate', updateKwOverlay);
+editor.on('zoom', updateKwOverlay);
+
+// TIMELINE
+function updateTimeline() {
+  const dotsSvg = document.getElementById('tl-dots');
+  const rangeEl = document.getElementById('tl-range');
+  const posEl = document.getElementById('tl-pos');
+  const scrubber = document.getElementById('tl-scrubber');
+  dotsSvg.innerHTML = '';
+  const ids = Object.keys(nodeData);
+  if (!ids.length) { rangeEl.textContent='—'; return; }
+  const times = ids.map(nid=>nodeData[nid].timestamp);
+  const minT = Math.min(...times), maxT = Math.max(...times), range = maxT-minT||1;
+  const W = document.getElementById('tl-track').offsetWidth || 300;
+  rangeEl.textContent = formatTs(minT).slice(0,10);
+  ids.forEach(nid => {
+    const x = ((nodeData[nid].timestamp-minT)/range)*W;
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('class','tl-dot-g');
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',x); c.setAttribute('cy',10); c.setAttribute('r',3);
+    c.setAttribute('fill','var(--text-muted)'); c.style.cursor='pointer';
+    const title = document.createElementNS('http://www.w3.org/2000/svg','title');
+    title.textContent = nodeData[nid].title;
+    c.appendChild(title);
+    c.addEventListener('click',()=>openPanel(nid));
+    g.appendChild(c); dotsSvg.appendChild(g);
   });
-})();
-
-// ── Drawflow node click passthrough ──
-// Drawflow intercepts clicks; we handle via card click in attachNodeHandlers
-editor.on('nodeSelected', (id) => {
-  // Only open panel if not already open for this node
-  if (selectedNodeId !== id) selectNode(id);
-});
-editor.on('nodeUnselected', () => {
-  // Don't auto-close; let user close manually
-});
-
-// ── Utility ──
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  if (tlScrubTime !== null) {
+    const sx = ((tlScrubTime-minT)/range)*W;
+    scrubber.style.left = sx+'px';
+    posEl.textContent = formatTs(tlScrubTime);
+    ids.forEach(nid => {
+      const el = dfEl.querySelector('.drawflow-node[id="node-'+nodeData[nid]._dfId+'"]');
+      if (el) el.style.opacity = nodeData[nid].timestamp > tlScrubTime ? '0.15' : '';
+    });
+  } else {
+    scrubber.style.left = W+'px';
+    posEl.textContent = 'all time';
+    ids.forEach(nid => {
+      const el = dfEl.querySelector('.drawflow-node[id="node-'+nodeData[nid]._dfId+'"]');
+      if (el) el.style.opacity = '';
+    });
+  }
 }
 
-// ── Init ──
-load();
+const tlTrack = document.getElementById('tl-track');
+tlTrack.addEventListener('mousedown', e=>{ tlDragging=true; moveScrubber(e); });
+document.addEventListener('mousemove', e=>{ if(tlDragging) moveScrubber(e); });
+document.addEventListener('mouseup', ()=>{ tlDragging=false; });
+tlTrack.addEventListener('dblclick', ()=>{ tlScrubTime=null; updateTimeline(); });
 
-// If no projects exist, create a default one
-if (Object.keys(projects).length === 0) {
-  createProject('My Project');
-  addNode('My Project', 'First Thread', 200, 180);
-  addNode('My Project', 'Second Thread', 450, 250);
+function moveScrubber(e) {
+  const rect = tlTrack.getBoundingClientRect();
+  const frac = Math.max(0, Math.min(1, (e.clientX-rect.left)/rect.width));
+  const ids = Object.keys(nodeData); if (!ids.length) return;
+  const times = ids.map(nid=>nodeData[nid].timestamp);
+  const minT = Math.min(...times), maxT = Math.max(...times);
+  tlScrubTime = frac >= 0.99 ? null : minT + frac*(maxT-minT);
+  updateTimeline();
 }
 
+// RELATION VIEW (force graph)
+let relNodes = [], relEdges = [], relAnim = null;
+
+function buildRelationGraph() {
+  const ids = Object.keys(nodeData);
+  relNodes = ids.map(nid => ({
+    id: nid, title: nodeData[nid].title,
+    x: 100+Math.random()*600, y: 100+Math.random()*400,
+    vx: 0, vy: 0
+  }));
+  relEdges = [];
+  // tag-based edges
+  const kwMap = {};
+  ids.forEach(nid => {
+    extractTags(nodeData[nid].content||'').forEach(kw => {
+      if (!kwMap[kw]) kwMap[kw]=[];
+      if (!kwMap[kw].includes(nid)) kwMap[kw].push(nid);
+    });
+  });
+  const drawn = new Set();
+  Object.values(kwMap).forEach(grp => {
+    for (let i=0;i<grp.length;i++) for (let j=i+1;j<grp.length;j++) {
+      const key=[grp[i],grp[j]].sort().join('-');
+      if (!drawn.has(key)) { drawn.add(key); relEdges.push({a:grp[i],b:grp[j],type:'tag'}); }
+    }
+  });
+}
+
+function tickRelation() {
+  const W = document.getElementById('relation-svg').clientWidth || 800;
+  const H = document.getElementById('relation-svg').clientHeight || 500;
+  const k = 0.05, rep = 3000, damp = 0.85;
+  for (let i=0;i<relNodes.length;i++) {
+    for (let j=i+1;j<relNodes.length;j++) {
+      const dx=relNodes[j].x-relNodes[i].x, dy=relNodes[j].y-relNodes[i].y;
+      const d2=dx*dx+dy*dy+1, f=rep/d2;
+      relNodes[i].vx-=f*dx; relNodes[i].vy-=f*dy;
+      relNodes[j].vx+=f*dx; relNodes[j].vy+=f*dy;
+    }
+  }
+  relEdges.forEach(e => {
+    const a=relNodes.find(n=>n.id===e.a), b=relNodes.find(n=>n.id===e.b);
+    if (!a||!b) return;
+    const dx=b.x-a.x, dy=b.y-a.y, d=Math.sqrt(dx*dx+dy*dy)||1;
+    const f=(d-120)*k;
+    a.vx+=f*dx/d; a.vy+=f*dy/d;
+    b.vx-=f*dx/d; b.vy-=f*dy/d;
+  });
+  relNodes.forEach(n => {
+    n.vx*=damp; n.vy*=damp;
+    n.x=Math.max(60,Math.min(W-60,n.x+n.vx));
+    n.y=Math.max(30,Math.min(H-30,n.y+n.vy));
+  });
+  renderRelationSVG();
+  relAnim = requestAnimationFrame(tickRelation);
+}
+
+function renderRelationSVG() {
+  const svg = document.getElementById('relation-svg');
+  svg.innerHTML = '';
+  const defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
+  svg.appendChild(defs);
+  relEdges.forEach(e => {
+    const a=relNodes.find(n=>n.id===e.a), b=relNodes.find(n=>n.id===e.b);
+    if (!a||!b) return;
+    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',a.x); line.setAttribute('y1',a.y);
+    line.setAttribute('x2',b.x); line.setAttribute('y2',b.y);
+    line.setAttribute('stroke','#c8a060'); line.setAttribute('stroke-width','1');
+    line.setAttribute('stroke-dasharray','4 4'); line.setAttribute('opacity','0.5');
+    svg.appendChild(line);
+  });
+  relNodes.forEach(n => {
+    const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.style.cursor='pointer';
+    g.addEventListener('click',()=>openPanel(n.id));
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',n.x); c.setAttribute('cy',n.y); c.setAttribute('r',18);
+    c.setAttribute('fill','var(--surface)'); c.setAttribute('stroke','var(--border)');
+    c.setAttribute('stroke-width','1.5');
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',n.x); t.setAttribute('y',n.y+4);
+    t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','10');
+    t.setAttribute('fill','var(--text)'); t.setAttribute('font-family','Outfit,sans-serif');
+    t.textContent = n.title.slice(0,12)+(n.title.length>12?'…':'');
+    g.appendChild(c); g.appendChild(t); svg.appendChild(g);
+  });
+}
+
+// TABS
+document.getElementById('tab-canvas').addEventListener('click', function() {
+  this.classList.add('active');
+  document.getElementById('tab-relations').classList.remove('active');
+  document.getElementById('canvas-wrap').style.display='';
+  document.getElementById('relation-view').classList.remove('visible');
+  if (relAnim) { cancelAnimationFrame(relAnim); relAnim=null; }
+});
+
+document.getElementById('tab-relations').addEventListener('click', function() {
+  this.classList.add('active');
+  document.getElementById('tab-canvas').classList.remove('active');
+  document.getElementById('canvas-wrap').style.display='none';
+  document.getElementById('relation-view').classList.add('visible');
+  buildRelationGraph();
+  if (relAnim) cancelAnimationFrame(relAnim);
+  relAnim = requestAnimationFrame(tickRelation);
+});
+
+// SIDEBAR TOGGLE
+document.getElementById('btn-sidebar').addEventListener('click', function() {
+  document.getElementById('sidebar').classList.toggle('collapsed');
+  setTimeout(updateKwOverlay, 220);
+});
+
+// THEME
+document.getElementById('theme-dots').addEventListener('click', function(e) {
+  const dot = e.target.closest('.theme-dot'); if (!dot) return;
+  document.querySelectorAll('.theme-dot').forEach(d=>d.classList.remove('active'));
+  dot.classList.add('active');
+  const theme = dot.dataset.theme;
+  document.documentElement.setAttribute('data-theme', theme==='ink'?'':theme);
+  localStorage.setItem('threadit-theme', theme);
+});
+
+// ADD NODE
+document.getElementById('btn-add').addEventListener('click', function() {
+  const x=200+Math.random()*300, y=100+Math.random()*200;
+  addNode(x, y);
+  renderProjects();
+});
+
+// DOUBLE CLICK canvas to add
+dfEl.addEventListener('dblclick', function(e) {
+  if (!e.target.classList.contains('drawflow') && e.target.id!=='drawflow') return;
+  const rect=dfEl.getBoundingClientRect(), zoom=editor.zoom||1;
+  addNode((e.clientX-rect.left-editor.canvas_x)/zoom, (e.clientY-rect.top-editor.canvas_y)/zoom);
+  renderProjects();
+});
+
+// DELETE key
+document.addEventListener('keydown', function(e) {
+  if (e.key==='Escape') { closePanel(); return; }
+  if ((e.key==='Delete'||e.key==='Backspace') && document.activeElement===document.body) {
+    const sel=editor.node_selected;
+    if (sel) {
+      const dfId=parseInt(sel.id.replace('node-',''));
+      const nid=dfIdMap[dfId];
+      editor.removeNodeId('node-'+dfId);
+      if (nid) delete nodeData[nid];
+      updateTimeline(); updateKwOverlay(); renderProjects(); saveData();
+    }
+  }
+  if ((e.ctrlKey||e.metaKey) && e.key==='b') { document.execCommand('bold'); e.preventDefault(); }
+  if ((e.ctrlKey||e.metaKey) && e.key==='i') { document.execCommand('italic'); e.preventDefault(); }
+});
+
+// EXPORT / IMPORT
+document.getElementById('btn-export').addEventListener('click', function() {
+  const blob=new Blob([JSON.stringify({nodeData,projects,currentProject},null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='threadit-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+});
+document.getElementById('btn-import').addEventListener('click', ()=>document.getElementById('import-file').click());
+document.getElementById('import-file').addEventListener('change', function(e) {
+  const file=e.target.files[0]; if (!file) return;
+  const reader=new FileReader();
+  reader.onload=function(ev) {
+    try {
+      const saved=JSON.parse(ev.target.result);
+      editor.clear();
+      Object.keys(nodeData).forEach(k=>delete nodeData[k]);
+      Object.keys(dfIdMap).forEach(k=>delete dfIdMap[k]);
+      if (saved.projects) { projects.length=0; saved.projects.forEach(p=>projects.push(p)); }
+      if (saved.currentProject) currentProject=saved.currentProject;
+      if (saved.nodeData) {
+        Object.entries(saved.nodeData).forEach(([nid,d]) => {
+          nodeData[nid]=d;
+          const dfId=editor.addNode('thread',1,1,d._x||200,d._y||200,'',{},nodeHTML(nid));
+          nodeData[nid]._dfId=dfId; dfIdMap[dfId]=nid;
+          setTimeout(()=>attachNodeClick(dfId,nid),80);
+        });
+      }
+      setTimeout(()=>{ renderProjects(); updateTimeline(); updateKwOverlay(); },200);
+    } catch(err){ alert('Invalid JSON'); }
+  };
+  reader.readAsText(file); e.target.value='';
+});
+
+// SAVE / LOAD
+function saveData() {
+  const toSave={nodeData:{},projects,currentProject};
+  Object.entries(nodeData).forEach(([nid,d])=>{
+    const dfId=d._dfId;
+    const el=dfEl.querySelector('.drawflow-node[id="node-'+dfId+'"]');
+    const pos=el?{x:parseInt(el.style.left)||0,y:parseInt(el.style.top)||0}:{x:200,y:200};
+    toSave.nodeData[nid]=Object.assign({},d,{_x:pos.x,_y:pos.y});
+  });
+  try { localStorage.setItem('threadit-v3',JSON.stringify(toSave)); } catch(e){}
+}
+
+function loadData() {
+  try {
+    const raw=localStorage.getItem('threadit-v3'); if (!raw) return false;
+    const saved=JSON.parse(raw);
+    if (saved.projects) { projects.length=0; saved.projects.forEach(p=>projects.push(p)); }
+    if (saved.currentProject) currentProject=saved.currentProject;
+    if (saved.nodeData && Object.keys(saved.nodeData).length>0) {
+      Object.entries(saved.nodeData).forEach(([nid,d])=>{
+        nodeData[nid]=d;
+        const dfId=editor.addNode('thread',1,1,d._x||200,d._y||200,'',{},nodeHTML(nid));
+        nodeData[nid]._dfId=dfId; dfIdMap[dfId]=nid;
+        setTimeout(()=>attachNodeClick(dfId,nid),80);
+      });
+      return true;
+    }
+  } catch(e){}
+  return false;
+}
+
+// THEME restore
+const savedTheme=localStorage.getItem('threadit-theme')||'ink';
+if (savedTheme && savedTheme!=='ink') {
+  document.documentElement.setAttribute('data-theme',savedTheme);
+  document.querySelectorAll('.theme-dot').forEach(d=>{
+    d.classList.toggle('active',d.dataset.theme===savedTheme);
+  });
+}
+
+// INIT
+const hasData=loadData();
+setTimeout(()=>{
+  if (!hasData) addNode(300,200,{title:'Origin',status:'idea'});
+  renderProjects();
+  updateTimeline();
+  updateKwOverlay();
+},300);
 </script>
 </body>
 </html>
