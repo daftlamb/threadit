@@ -43,7 +43,7 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;over
 #drawflow{width:100%;height:100%;}
 .drawflow{background:var(--bg);background-image:radial-gradient(circle,var(--border) 1px,transparent 1px);background-size:24px 24px;}
 .drawflow .drawflow-node{background:transparent;border:none;padding:0;}
-.drawflow .drawflow-node.selected .thread-node{border-color:var(--accent)!important;}
+.drawflow .drawflow-node.selected .thread-node{box-shadow:0 0 0 2px var(--accent),0 4px 16px rgba(0,0,0,0.4)!important;border-color:var(--border)!important;}
 .drawflow .connection .main-path{stroke:var(--border);stroke-width:1.5;}
 .thread-node{background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:200px;max-width:260px;cursor:pointer;transition:border-color 0.15s,box-shadow 0.15s;padding:10px 12px;}
 .thread-node:hover{border-color:var(--text-muted);box-shadow:0 2px 8px rgba(0,0,0,0.25);}
@@ -777,55 +777,78 @@ const DAY_LABELS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 function renderCalendar() {
   const view = document.getElementById('calendar-view');
-  const year = _calYear, month = _calMonth;
-  const today = new Date();
-  // group nodes by date string YYYY-MM-DD
-  const byDate = {};
-  Object.keys(nodeData).forEach(nid => {
-    const d = new Date(nodeData[nid].timestamp);
-    const key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-    if (!byDate[key]) byDate[key] = [];
-    byDate[key].push(nid);
+  if (!view) return;
+  const nodes = Object.values(nodeData);
+  // build date map
+  const dateMap = {};
+  nodes.forEach(n => {
+    if (!n.timestamp) return;
+    const d = new Date(n.timestamp);
+    const key = d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+    if (!dateMap[key]) dateMap[key] = [];
+    dateMap[key].push(n);
   });
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month+1, 0).getDate();
-  let html = `<div class="cal-header">
-    <button class="cal-nav" id="cal-prev">&#8592;</button>
-    <h2>${MONTH_NAMES[month]} ${year}</h2>
-    <button class="cal-nav" id="cal-next">&#8594;</button>
-  </div>
-  <div class="cal-grid">`;
-  DAY_LABELS.forEach(l => { html += `<div class="cal-day-label">${l}</div>`; });
-  for (let i=0;i<firstDay;i++) html += `<div class="cal-cell empty"></div>`;
-  for (let d=1;d<=daysInMonth;d++) {
-    const key = year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    const isToday = today.getFullYear()===year && today.getMonth()===month && today.getDate()===d;
-    const nodes = byDate[key]||[];
-    const isExp = _calExpanded===key;
-    let dots = nodes.map(nid=>`<div class="cal-dot" style="background:${STATUS_COLORS[nodeData[nid].status]||'#888'}"></div>`).join('');
-    let expanded = '';
-    if (isExp && nodes.length) {
-      expanded = '<div class="cal-expanded">'+nodes.map(nid=>`<div class="cal-expanded-item" data-nid="${nid}">${nodeData[nid].title||'Untitled'}</div>`).join('')+'</div>';
+  const today = new Date();
+  const year = _calYear || today.getFullYear();
+  // render all 12 months
+  let html = '<div style="padding:16px 20px;overflow-y:auto;height:100%;">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">';
+  html += '<span style="font-size:13px;color:var(--text);letter-spacing:1px;">'+year+'</span>';
+  html += '<div style="display:flex;gap:8px;">';
+  html += '<button id="cal-prev-year" style="background:none;border:1px solid var(--border);color:var(--text-muted);padding:2px 8px;border-radius:3px;cursor:pointer;font-size:11px;">&#8249; '+( year-1)+'</button>';
+  html += '<button id="cal-next-year" style="background:none;border:1px solid var(--border);color:var(--text-muted);padding:2px 8px;border-radius:3px;cursor:pointer;font-size:11px;">'+(year+1)+' &#8250;</button>';
+  html += '</div></div>';
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const dayNames = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  for (let mo = 0; mo < 12; mo++) {
+    const firstDay = new Date(year, mo, 1).getDay();
+    const daysInMonth = new Date(year, mo+1, 0).getDate();
+    html += '<div style="margin-bottom:24px;">';
+    html += '<div style="font-size:11px;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;">'+monthNames[mo]+'</div>';
+    html += '<div class="cal-grid">';
+    dayNames.forEach(d => { html += '<div style="font-size:9px;color:var(--text-muted);text-align:center;padding:2px 0;">'+d+'</div>'; });
+    for (let i=0;i<firstDay;i++) html += '<div></div>';
+    for (let d=1;d<=daysInMonth;d++) {
+      const key = year+'-'+(mo+1)+'-'+d;
+      const dayNodes = dateMap[key]||[];
+      const isToday = today.getFullYear()===year && today.getMonth()===mo && today.getDate()===d;
+      const isExp = _calExpanded===key;
+      html += '<div class="cal-cell'+(isToday?' today':'')+(dayNodes.length?' has-nodes':'')+'" data-key="'+key+'" style="cursor:'+(dayNodes.length?'pointer':'default')+';">';
+      html += '<div class="cal-date">'+d+'</div>';
+      if (dayNodes.length) {
+        html += '<div style="display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:2px;">';
+        dayNodes.slice(0,4).forEach(n => {
+          const col = n.status==='active'?'#c8a060':n.status==='done'?'#60a870':n.status==='dropped'?'#a06060':'#555';
+          html += '<div style="width:4px;height:4px;border-radius:50%;background:'+col+'"></div>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+      if (isExp && dayNodes.length) {
+        html += '<div class="cal-expanded" style="grid-column:1/-1;">';
+        dayNodes.forEach(n => {
+          html += '<div class="cal-expanded-item" data-nid="'+n.id+'">'+
+            '<span style="color:'+(n.status==='active'?'#c8a060':n.status==='done'?'#60a870':n.status==='dropped'?'#a06060':'var(--text-muted)')+'">●</span> '+
+            (n.title||'Untitled')+'</div>';
+        });
+        html += '</div>';
+      }
     }
-    html += `<div class="cal-cell${isToday?' today':''}" data-key="${key}">
-      <div class="cal-date">${d}</div>
-      <div class="cal-dots">${dots}</div>
-      ${expanded}
-    </div>`;
+    html += '</div></div>';
   }
   html += '</div>';
   view.innerHTML = html;
-  view.querySelector('#cal-prev').addEventListener('click', ()=>{ _calMonth--; if(_calMonth<0){_calMonth=11;_calYear--;} _calExpanded=null; renderCalendar(); });
-  view.querySelector('#cal-next').addEventListener('click', ()=>{ _calMonth++; if(_calMonth>11){_calMonth=0;_calYear++;} _calExpanded=null; renderCalendar(); });
-  view.querySelectorAll('.cal-cell[data-key]').forEach(cell => {
-    cell.addEventListener('click', e => {
-      const key = cell.dataset.key;
-      if (_calExpanded===key) { _calExpanded=null; } else { _calExpanded=key; }
+  view.querySelector('#cal-prev-year').addEventListener('click', ()=>{ _calYear=year-1; _calExpanded=null; renderCalendar(); });
+  view.querySelector('#cal-next-year').addEventListener('click', ()=>{ _calYear=year+1; _calExpanded=null; renderCalendar(); });
+  view.querySelectorAll('.cal-cell.has-nodes').forEach(el => {
+    el.addEventListener('click', ()=>{
+      const key = el.dataset.key;
+      _calExpanded = _calExpanded===key ? null : key;
       renderCalendar();
     });
   });
-  view.querySelectorAll('.cal-expanded-item[data-nid]').forEach(el => {
-    el.addEventListener('click', e => { e.stopPropagation(); openPanel(el.dataset.nid); });
+  view.querySelectorAll('.cal-expanded-item').forEach(el => {
+    el.addEventListener('click', ()=>{ openNode(el.dataset.nid); });
   });
 }
 
