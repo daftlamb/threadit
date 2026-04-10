@@ -53,6 +53,10 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;over
 .node-ts{letter-spacing:0.3px;}
 .node-tags{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
 .thread-node.search-match{box-shadow:0 0 0 2px var(--accent);}
+.drawflow .drawflow-node .input, .drawflow .drawflow-node .output{width:8px;height:8px;border-radius:50%;background:var(--border);border:1.5px solid var(--text-muted);top:50%;transform:translateY(-50%);}
+.drawflow .drawflow-node .input:hover, .drawflow .drawflow-node .output:hover{background:var(--accent);border-color:var(--accent);}
+.drawflow .drawflow-node .input{left:-5px;}
+.drawflow .drawflow-node .output{right:-5px;}
 .node-header{padding:8px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
 .node-title-text{font-size:13px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .node-status{font-size:9px;padding:2px 6px;border-radius:2px;flex-shrink:0;cursor:pointer;letter-spacing:0.5px;text-transform:uppercase;}
