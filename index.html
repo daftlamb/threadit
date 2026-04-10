@@ -53,6 +53,10 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;over
 .node-ts{letter-spacing:0.3px;}
 .node-tags{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
 .thread-node.search-match{box-shadow:0 0 0 2px var(--accent);}
+.thread-node.status-active{background:rgba(200,160,96,0.08);border-top:2px solid #c8a060;}
+.thread-node.status-done{background:rgba(96,168,112,0.08);border-top:2px solid #60a870;}
+.thread-node.status-dropped{background:rgba(160,96,96,0.06);border-top:2px solid #a06060;opacity:0.55;}
+.thread-node.status-idea{background:var(--surface);}
 .drawflow .drawflow-node .input, .drawflow .drawflow-node .output{width:8px;height:8px;border-radius:50%;background:var(--border);border:1.5px solid var(--text-muted);top:50%;transform:translateY(-50%);}
 .drawflow .drawflow-node .input:hover, .drawflow .drawflow-node .output:hover{background:var(--accent);border-color:var(--accent);}
 .drawflow .drawflow-node .input{left:-5px;}
@@ -66,6 +70,25 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;over
 .node-status.dropped{background:#2a0a0a;color:#a86060;}
 #relation-view{flex:1;display:none;position:relative;overflow:hidden;background:var(--bg);}
 #relation-view.visible{display:block;}
+#calendar-view{flex:1;display:none;overflow-y:auto;padding:24px;background:var(--bg);}
+#calendar-view.visible{display:block;}
+.cal-header{display:flex;align-items:center;gap:16px;margin-bottom:16px;}
+.cal-header h2{font-size:1rem;font-weight:600;color:var(--text);letter-spacing:0.05em;flex:1;}
+.cal-nav{background:none;border:1px solid var(--border);color:var(--text);cursor:pointer;padding:2px 10px;border-radius:3px;font-size:0.85rem;}
+.cal-nav:hover{background:var(--surface);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.cal-day-label{text-align:center;font-size:0.7rem;color:var(--text-muted);padding:4px 0;letter-spacing:0.05em;}
+.cal-cell{min-height:60px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:4px 6px;cursor:pointer;transition:background 0.15s;}
+.cal-cell:hover{background:rgba(200,160,96,0.08);}
+.cal-cell.empty{background:transparent;border-color:transparent;cursor:default;}
+.cal-cell.today{border-color:var(--accent);}
+.cal-cell .cal-date{font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;}
+.cal-cell.today .cal-date{color:var(--accent);font-weight:700;}
+.cal-dots{display:flex;flex-wrap:wrap;gap:3px;margin-top:2px;}
+.cal-dot{width:7px;height:7px;border-radius:50%;}
+.cal-expanded{margin-top:4px;font-size:0.72rem;color:var(--text);}
+.cal-expanded-item{padding:2px 0;border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cal-expanded-item:hover{color:var(--accent);}
 #relation-svg{width:100%;height:100%;}
 #right-panel{width:480px;min-width:300px;max-width:70vw;background:var(--surface);border-left:1px solid var(--border);transform:translateX(100%);transition:transform 0.2s;display:flex;flex-direction:column;overflow:hidden;position:relative;}
 #right-panel.open{transform:translateX(0);}
@@ -99,6 +122,20 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;over
 #tl-dots{position:absolute;top:50%;left:0;right:0;transform:translateY(-50%);height:20px;}
 #tl-pos{font-size:10px;color:var(--text-muted);min-width:100px;text-align:right;}
 .tl-tooltip{position:absolute;bottom:16px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:10px;padding:2px 6px;white-space:nowrap;pointer-events:none;transform:translateX(-50%);}
+#tl-panel{position:fixed;bottom:50px;left:0;right:0;height:320px;background:var(--bg);border-top:1px solid var(--border);z-index:999;display:none;overflow-y:auto;padding:16px 24px;}
+#tl-panel.open{display:flex;gap:0;}
+#tl-axis-col{width:80px;flex-shrink:0;position:relative;}
+#tl-axis-line{position:absolute;left:70px;top:0;bottom:0;width:2px;background:var(--border);}
+.tl-month-label{font-size:10px;color:var(--text-muted);letter-spacing:0.05em;text-align:right;padding-right:12px;height:80px;display:flex;align-items:flex-start;padding-top:4px;}
+#tl-nodes-col{flex:1;display:flex;flex-direction:column;gap:0;}
+.tl-node-row{display:flex;align-items:flex-start;min-height:80px;padding:4px 0;}
+.tl-node-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;margin-left:-5px;}
+.tl-node-card{margin-left:12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:6px 10px;cursor:pointer;max-width:400px;}
+.tl-node-card:hover{border-color:var(--accent);}
+.tl-node-title{font-size:0.8rem;color:var(--text);font-weight:500;}
+.tl-node-time{font-size:0.7rem;color:var(--text-muted);margin-top:2px;}
+#tl-toggle{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;padding:0 4px;letter-spacing:0.05em;}
+#tl-toggle:hover{color:var(--text);}
 
 #rp-resize{position:absolute;left:0;top:0;bottom:0;width:4px;cursor:ew-resize;background:transparent;z-index:10;}
 #rp-resize:hover{background:var(--accent);}
@@ -110,6 +147,7 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;over
   <span id="tb-title">THREAD IT</span>
   <button class="tab-btn active" id="tab-canvas">CANVAS</button>
   <button class="tab-btn" id="tab-relations">RELATIONS</button>
+  <button class="tab-btn" id="tab-calendar">CALENDAR</button>
   <input id="search-input" type="text" placeholder="search nodes...">
   <div id="theme-dots" style="display:flex;gap:5px;align-items:center;">
     <div class="theme-dot active" data-theme="ink" style="background:#c8a060;" title="ink"></div>
@@ -136,6 +174,7 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;over
   <div id="relation-view">
     <svg id="relation-svg"></svg>
   </div>
+  <div id="calendar-view" style="display:none;flex:1;overflow-y:auto;padding:24px;background:var(--bg);"></div>
   <div id="right-panel"><div id="rp-resize"></div>
     <div id="rp-header">
       <div id="rp-title-row">
@@ -161,7 +200,12 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;over
     <div id="rp-footer"><span id="rp-timestamp"></span></div>
   </div>
 </div>
+<div id="tl-panel">
+  <div id="tl-axis-col"><div id="tl-axis-line"></div></div>
+  <div id="tl-nodes-col"></div>
+</div>
 <div id="timeline">
+  <button id="tl-toggle">▲ TIMELINE</button>
   <span id="tl-range">—</span>
   <div id="tl-track">
     <svg id="tl-dots" width="100%" height="20"></svg>
@@ -530,6 +574,56 @@ document.addEventListener('mousemove', e=>{ if(tlDragging) moveScrubber(e); });
 document.addEventListener('mouseup', ()=>{ tlDragging=false; });
 tlTrack.addEventListener('dblclick', ()=>{ tlScrubTime=null; updateTimeline(); });
 
+// VERTICAL TIMELINE PANEL
+const MON_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function renderTlPanel() {
+  const ids = Object.keys(nodeData);
+  if (!ids.length) return;
+  ids.sort((a,b) => nodeData[b].timestamp - nodeData[a].timestamp);
+  const axisCol = document.getElementById('tl-axis-col');
+  const nodesCol = document.getElementById('tl-nodes-col');
+  let lastMonthKey = null;
+  axisCol.innerHTML = '<div id="tl-axis-line"></div>';
+  nodesCol.innerHTML = '';
+  ids.forEach(nid => {
+    const d = new Date(nodeData[nid].timestamp);
+    const monthKey = d.getFullYear()+'-'+d.getMonth();
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'tl-month-label';
+    labelDiv.textContent = monthKey !== lastMonthKey ? MON_SHORT[d.getMonth()]+' '+d.getFullYear() : '';
+    lastMonthKey = monthKey;
+    axisCol.appendChild(labelDiv);
+    const row = document.createElement('div');
+    row.className = 'tl-node-row';
+    const dot = document.createElement('div');
+    dot.className = 'tl-node-dot';
+    dot.style.background = STATUS_COLORS[nodeData[nid].status] || '#888';
+    const card = document.createElement('div');
+    card.className = 'tl-node-card';
+    const dateStr = d.toLocaleString('en-US',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    card.innerHTML = `<div class="tl-node-title">${nodeData[nid].title||'Untitled'}</div><div class="tl-node-time">${dateStr}</div>`;
+    card.addEventListener('click', ()=>openPanel(nid));
+    row.appendChild(dot);
+    row.appendChild(card);
+    nodesCol.appendChild(row);
+  });
+}
+
+let _tlPanelOpen = false;
+document.getElementById('tl-toggle').addEventListener('click', ()=>{
+  _tlPanelOpen = !_tlPanelOpen;
+  const panel = document.getElementById('tl-panel');
+  const btn = document.getElementById('tl-toggle');
+  if (_tlPanelOpen) {
+    panel.classList.add('open');
+    btn.textContent = '▼ TIMELINE';
+    renderTlPanel();
+  } else {
+    panel.classList.remove('open');
+    btn.textContent = '▲ TIMELINE';
+  }
+});
+
 function moveScrubber(e) {
   const rect = tlTrack.getBoundingClientRect();
   const frac = Math.max(0, Math.min(1, (e.clientX-rect.left)/rect.width));
@@ -542,12 +636,15 @@ function moveScrubber(e) {
 
 // RELATION VIEW (force graph)
 let relNodes = [], relEdges = [], relAnim = null;
+let _relPositions = {}, _relPosNodeCount = 0;
 
 function buildRelationGraph() {
   const ids = Object.keys(nodeData);
+  const hasCached = Object.keys(_relPositions).length > 0 && _relPosNodeCount === ids.length;
   relNodes = ids.map(nid => ({
     id: nid, title: nodeData[nid].title,
-    x: 100+Math.random()*600, y: 100+Math.random()*400,
+    x: hasCached && _relPositions[nid] ? _relPositions[nid].x : 100+Math.random()*600,
+    y: hasCached && _relPositions[nid] ? _relPositions[nid].y : 100+Math.random()*400,
     vx: 0, vy: 0
   }));
   relEdges = [];
@@ -568,6 +665,7 @@ function buildRelationGraph() {
   });
 }
 
+let _relTickCount = 0;
 function tickRelation() {
   const W = document.getElementById('relation-svg').clientWidth || 800;
   const H = document.getElementById('relation-svg').clientHeight || 500;
@@ -588,13 +686,24 @@ function tickRelation() {
     a.vx+=f*dx/d; a.vy+=f*dy/d;
     b.vx-=f*dx/d; b.vy-=f*dy/d;
   });
+  let maxV = 0;
   relNodes.forEach(n => {
     n.vx*=damp; n.vy*=damp;
     n.x=Math.max(60,Math.min(W-60,n.x+n.vx));
     n.y=Math.max(30,Math.min(H-30,n.y+n.vy));
+    maxV = Math.max(maxV, Math.abs(n.vx)+Math.abs(n.vy));
   });
   renderRelationSVG();
-  relAnim = requestAnimationFrame(tickRelation);
+  _relTickCount++;
+  if (maxV < 0.3 && _relTickCount > 30) {
+    // settled — save positions and stop
+    _relPositions = {};
+    relNodes.forEach(n => { _relPositions[n.id] = {x: n.x, y: n.y}; });
+    _relPosNodeCount = relNodes.length;
+    relAnim = null;
+  } else {
+    relAnim = requestAnimationFrame(tickRelation);
+  }
 }
 
 function renderRelationSVG() {
@@ -633,19 +742,102 @@ function renderRelationSVG() {
 document.getElementById('tab-canvas').addEventListener('click', function() {
   this.classList.add('active');
   document.getElementById('tab-relations').classList.remove('active');
+  document.getElementById('tab-calendar').classList.remove('active');
   document.getElementById('canvas-wrap').style.display='';
   document.getElementById('relation-view').classList.remove('visible');
+  document.getElementById('calendar-view').style.display='none';
   if (relAnim) { cancelAnimationFrame(relAnim); relAnim=null; }
 });
 
 document.getElementById('tab-relations').addEventListener('click', function() {
   this.classList.add('active');
   document.getElementById('tab-canvas').classList.remove('active');
+  document.getElementById('tab-calendar').classList.remove('active');
   document.getElementById('canvas-wrap').style.display='none';
   document.getElementById('relation-view').classList.add('visible');
+  document.getElementById('calendar-view').style.display='none';
   buildRelationGraph();
   if (relAnim) cancelAnimationFrame(relAnim);
-  relAnim = requestAnimationFrame(tickRelation);
+  const ids = Object.keys(nodeData);
+  const hasCached = Object.keys(_relPositions).length > 0 && _relPosNodeCount === ids.length;
+  if (!hasCached) {
+    _relTickCount = 0;
+    relAnim = requestAnimationFrame(tickRelation);
+  } else {
+    renderRelationSVG();
+  }
+});
+
+// CALENDAR
+let _calYear = new Date().getFullYear(), _calMonth = new Date().getMonth();
+let _calExpanded = null;
+const STATUS_COLORS = { active:'#c8a060', done:'#60a870', dropped:'#a06060', idea:'#888' };
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAY_LABELS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function renderCalendar() {
+  const view = document.getElementById('calendar-view');
+  const year = _calYear, month = _calMonth;
+  const today = new Date();
+  // group nodes by date string YYYY-MM-DD
+  const byDate = {};
+  Object.keys(nodeData).forEach(nid => {
+    const d = new Date(nodeData[nid].timestamp);
+    const key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    if (!byDate[key]) byDate[key] = [];
+    byDate[key].push(nid);
+  });
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  let html = `<div class="cal-header">
+    <button class="cal-nav" id="cal-prev">&#8592;</button>
+    <h2>${MONTH_NAMES[month]} ${year}</h2>
+    <button class="cal-nav" id="cal-next">&#8594;</button>
+  </div>
+  <div class="cal-grid">`;
+  DAY_LABELS.forEach(l => { html += `<div class="cal-day-label">${l}</div>`; });
+  for (let i=0;i<firstDay;i++) html += `<div class="cal-cell empty"></div>`;
+  for (let d=1;d<=daysInMonth;d++) {
+    const key = year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const isToday = today.getFullYear()===year && today.getMonth()===month && today.getDate()===d;
+    const nodes = byDate[key]||[];
+    const isExp = _calExpanded===key;
+    let dots = nodes.map(nid=>`<div class="cal-dot" style="background:${STATUS_COLORS[nodeData[nid].status]||'#888'}"></div>`).join('');
+    let expanded = '';
+    if (isExp && nodes.length) {
+      expanded = '<div class="cal-expanded">'+nodes.map(nid=>`<div class="cal-expanded-item" data-nid="${nid}">${nodeData[nid].title||'Untitled'}</div>`).join('')+'</div>';
+    }
+    html += `<div class="cal-cell${isToday?' today':''}" data-key="${key}">
+      <div class="cal-date">${d}</div>
+      <div class="cal-dots">${dots}</div>
+      ${expanded}
+    </div>`;
+  }
+  html += '</div>';
+  view.innerHTML = html;
+  view.querySelector('#cal-prev').addEventListener('click', ()=>{ _calMonth--; if(_calMonth<0){_calMonth=11;_calYear--;} _calExpanded=null; renderCalendar(); });
+  view.querySelector('#cal-next').addEventListener('click', ()=>{ _calMonth++; if(_calMonth>11){_calMonth=0;_calYear++;} _calExpanded=null; renderCalendar(); });
+  view.querySelectorAll('.cal-cell[data-key]').forEach(cell => {
+    cell.addEventListener('click', e => {
+      const key = cell.dataset.key;
+      if (_calExpanded===key) { _calExpanded=null; } else { _calExpanded=key; }
+      renderCalendar();
+    });
+  });
+  view.querySelectorAll('.cal-expanded-item[data-nid]').forEach(el => {
+    el.addEventListener('click', e => { e.stopPropagation(); openPanel(el.dataset.nid); });
+  });
+}
+
+document.getElementById('tab-calendar').addEventListener('click', function() {
+  this.classList.add('active');
+  document.getElementById('tab-canvas').classList.remove('active');
+  document.getElementById('tab-relations').classList.remove('active');
+  document.getElementById('canvas-wrap').style.display='none';
+  document.getElementById('relation-view').classList.remove('visible');
+  document.getElementById('calendar-view').style.display='block';
+  if (relAnim) { cancelAnimationFrame(relAnim); relAnim=null; }
+  renderCalendar();
 });
 
 // SIDEBAR TOGGLE
